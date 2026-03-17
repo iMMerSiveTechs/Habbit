@@ -1,0 +1,1032 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id
+  email         String    @unique
+  name          String?
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  Profile       Profile?
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
+
+model Profile {
+  id                 Int                 @id @default(autoincrement())
+  handle             String              @unique
+  userId             String              @unique
+  subscriptionTier   String              @default("free")
+  grandfathered      Boolean             @default(false)
+  isAdmin            Boolean             @default(false)
+  skipOnboarding     Boolean             @default(false)
+  trialEndsAt        DateTime?
+  subscriptionEndsAt DateTime?
+  integrity          Int                 @default(100)
+  xp                 Int                 @default(0)
+  lastAuditDate      String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  user               User                @relation(fields: [userId], references: [id])
+  achievements       Achievement[]
+  biometricData      BiometricData[]
+  buddies            Buddy[]
+  dailyIntentions    DailyIntention[]
+  dailyReflections   DailyReflection[]
+  weeklyReflections  WeeklyReflection[]
+  monthlyReflections MonthlyReflection[]
+  reflectionSettings ReflectionSettings?
+  focusSessions      FocusSession[]
+  groupMemberships   GroupMembership[]
+  habits             Habit[]
+  identityStatements IdentityStatement[]
+  geofences          LocationGeofence[]
+  predictions        Prediction[]
+  reflections        Reflection[]
+  templatePurchases  TemplatePurchase[]
+  userGoal           UserGoal?
+  voiceProfile       VoiceProfile?
+  trackScores        TrackScore[]
+  userPreference     UserPreference?
+  playHistory        PlayHistory[]
+}
+
+model Habit {
+  id                String          @id @default(cuid())
+  profileId         Int
+  title             String
+  description       String?
+  icon              String?
+  color             String          @default("#00D4FF")
+  category          String          @default("general")
+  frequency         String          @default("daily")
+  targetCount       Int             @default(1)
+  order             Int             @default(0)
+  archived          Boolean         @default(false)
+  recurringType     String?
+  recurringInterval Int?
+  recurringDays     String?
+  reminderTime      String?
+  reminderEnabled   Boolean         @default(false)
+  habitType         String          @default("standard")
+  protocolTarget    Int?
+  protocolWindowDays Int?
+  protocolStartDate String?
+  protocolStatus    String?
+  bestStreak        Int             @default(0)
+  completionHistory String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  profile           Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  events            HabitEvent[]
+  reminders         HabitReminder[]
+
+  @@map("habit")
+}
+
+model HabitReminder {
+  id                String   @id @default(cuid())
+  habitId           String
+  reminderTime      String
+  recurringType     String   @default("daily")
+  recurringInterval Int?
+  recurringDays     String?
+  enabled           Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  habit             Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@map("habit_reminder")
+}
+
+model HabitEvent {
+  id            String   @id @default(cuid())
+  habitId       String
+  completedAt   DateTime @default(now())
+  note          String?
+  mood          Int?
+  clientEventId String?
+  habit         Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@map("habit_event")
+}
+
+model Reflection {
+  id          String   @id @default(cuid())
+  profileId   Int
+  date        DateTime @default(now())
+  prompt      String
+  response    String
+  mood        Int?
+  energyLevel Int?
+  aiInsight   String?
+  createdAt   DateTime @default(now())
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("reflection")
+}
+
+model FocusSession {
+  id              String    @id @default(cuid())
+  profileId       Int
+  startTime       DateTime
+  endTime         DateTime?
+  duration        Int?
+  task            String
+  completed       Boolean   @default(false)
+  interrupted     Boolean   @default(false)
+  sessionType     String?
+  mood            String?
+  energyLevel     Int?
+  goalDescription String?
+  linkedHabitId   String?
+  linkedTodoId    String?
+  locationName    String?
+  locationLat     Float?
+  locationLon     Float?
+  productivity    Int?
+  notes           String?
+  distractions    Int?
+  inFlowState     Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  profile         Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("focus_session")
+}
+
+model Prediction {
+  id              String   @id @default(cuid())
+  profileId       Int
+  date            DateTime
+  predictedEnergy String
+  actualMood      Int?
+  accuracy        Float?
+  createdAt       DateTime @default(now())
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("prediction")
+}
+
+model BiometricData {
+  id           String   @id @default(cuid())
+  profileId    Int
+  timestamp    DateTime @default(now())
+  hrv          Int?
+  restingHR    Int?
+  sleepScore   Float?
+  sleepHours   Float?
+  deepSleep    Float?
+  remSleep     Float?
+  stressLevel  Int?
+  energyLevel  Int?
+  activityMins Int?
+  steps        Int?
+  source       String   @default("manual")
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("biometric_data")
+}
+
+model Buddy {
+  id        String    @id @default(cuid())
+  profileId Int
+  buddyId   Int
+  status    String    @default("pending")
+  streak    Int       @default(0)
+  lastNudge DateTime?
+  createdAt DateTime  @default(now())
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, buddyId])
+  @@map("buddy")
+}
+
+model GroupMembership {
+  id        String   @id @default(cuid())
+  profileId Int
+  groupId   String
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, groupId])
+  @@map("group_membership")
+}
+
+model Group {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  topic       String?
+  maxMembers  Int               @default(5)
+  isPrivate   Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  members     GroupMembership[]
+
+  @@map("group")
+}
+
+model VoiceProfile {
+  id          String   @id @default(cuid())
+  profileId   Int      @unique
+  voiceMode   String   @default("adaptive")
+  pitch       Float    @default(1.0)
+  speed       Float    @default(1.0)
+  personality String   @default("balanced")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("voice_profile")
+}
+
+model LocationGeofence {
+  id                String             @id @default(cuid())
+  profileId         Int
+  name              String
+  category          String
+  latitude          Float
+  longitude         Float
+  radius            Int                @default(100)
+  isActive          Boolean            @default(true)
+  onEnter           String?
+  onExit            String?
+  linkedHabits      String?
+  visitCount        Int                @default(0)
+  lastVisit         DateTime?
+  createdAt         DateTime           @default(now())
+  linkedTodos       String?
+  weatherConditions String?
+  profile           Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  reminders         LocationReminder[]
+  visits            LocationVisit[]
+
+  @@map("location_geofence")
+}
+
+model LocationVisit {
+  id              String           @id @default(cuid())
+  geofenceId      String
+  profileId       Int
+  arrivedAt       DateTime         @default(now())
+  departedAt      DateTime?
+  duration        Int?
+  habitsCompleted Int              @default(0)
+  moodBefore      Int?
+  moodAfter       Int?
+  productivity    Int?
+  geofence        LocationGeofence @relation(fields: [geofenceId], references: [id], onDelete: Cascade)
+
+  @@map("location_visit")
+}
+
+model LocationPattern {
+  id            String   @id @default(cuid())
+  profileId     Int
+  latitude      Float
+  longitude     Float
+  category      String?
+  frequency     Int      @default(1)
+  avgDuration   Int?
+  commonDays    String?
+  commonHours   String?
+  suggested     Boolean  @default(false)
+  suggestedName String?
+  confidence    Float    @default(0.5)
+  lastSeen      DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@map("location_pattern")
+}
+
+model LocationMoodMap {
+  id           String   @id @default(cuid())
+  profileId    Int
+  latitude     Float
+  longitude    Float
+  radius       Int      @default(50)
+  locationName String?
+  avgMood      Float
+  visits       Int      @default(1)
+  lastUpdated  DateTime @default(now())
+
+  @@map("location_mood_map")
+}
+
+model Todo {
+  id                String     @id @default(cuid())
+  profileId         Int
+  title             String
+  description       String?
+  completed         Boolean    @default(false)
+  archived          Boolean    @default(false)
+  priority          String     @default("medium")
+  dueDate           DateTime?
+  linkedHabitId     String?
+  order             Int        @default(0)
+  recurringType     String?
+  recurringInterval Int?
+  recurringDays     String?
+  reminderTime      String?
+  reminderEnabled   Boolean    @default(false)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  completedAt       DateTime?
+  archivedAt        DateTime?
+  items             TodoItem[]
+  reminders         TodoReminder[]
+
+  @@map("todo")
+}
+
+model TodoTemplate {
+  id          String             @id @default(cuid())
+  profileId   Int?
+  title       String
+  description String?
+  priority    String             @default("medium")
+  category    String             @default("general")
+  isSystem    Boolean            @default(false)
+  usageCount  Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  items       TodoTemplateItem[]
+
+  @@map("todo_template")
+}
+
+model TodoTemplateItem {
+  id         String       @id @default(cuid())
+  templateId String
+  title      String
+  order      Int          @default(0)
+  createdAt  DateTime     @default(now())
+  template   TodoTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@map("todo_template_item")
+}
+
+model TodoItem {
+  id          String    @id @default(cuid())
+  todoId      String
+  title       String
+  completed   Boolean   @default(false)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+  todo        Todo      @relation(fields: [todoId], references: [id], onDelete: Cascade)
+
+  @@map("todo_item")
+}
+
+model TodoReminder {
+  id             String   @id @default(cuid())
+  todoId         String
+  reminderTime   String   // HH:MM format
+  recurringType  String   @default("daily") // daily, weekdays, weekends, weekly
+  recurringDays  String?  // JSON array of day indices [0-6] for weekly
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  todo           Todo     @relation(fields: [todoId], references: [id], onDelete: Cascade)
+
+  @@map("todo_reminder")
+}
+
+model WorkSchedule {
+  id               String   @id @default(cuid())
+  profileId        Int
+  dayOfWeek        Int
+  startTime        String
+  endTime          String
+  workLocationName String
+  workLatitude     Float
+  workLongitude    Float
+  workAddress      String?
+  homeLatitude     Float
+  homeLongitude    Float
+  homeAddress      String?
+  isActive         Boolean  @default(true)
+  prepTimeMinutes  Int      @default(60)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("work_schedule")
+}
+
+model Route {
+  id                String    @id @default(cuid())
+  profileId         Int
+  fromName          String
+  fromLatitude      Float
+  fromLongitude     Float
+  toName            String
+  toLatitude        Float
+  toLongitude       Float
+  estimatedMinutes  Int
+  lastTravelMinutes Int?
+  lastChecked       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("route")
+}
+
+model MorningRoutine {
+  id              String                     @id @default(cuid())
+  profileId       Int
+  title           String
+  description     String?
+  order           Int                        @default(0)
+  durationMinutes Int                        @default(5)
+  isRequired      Boolean                    @default(true)
+  category        String                     @default("general")
+  linkedHabitId   String?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  completions     MorningRoutineCompletion[]
+
+  @@map("morning_routine")
+}
+
+model MorningRoutineCompletion {
+  id          String         @id @default(cuid())
+  routineId   String
+  profileId   Int
+  completedAt DateTime       @default(now())
+  skipped     Boolean        @default(false)
+  note        String?
+  routine     MorningRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@map("morning_routine_completion")
+}
+
+model TravelSession {
+  id              String    @id @default(cuid())
+  profileId       Int
+  fromName        String
+  fromLatitude    Float
+  fromLongitude   Float
+  toName          String
+  toLatitude      Float
+  toLongitude     Float
+  startTime       DateTime
+  endTime         DateTime?
+  expectedMinutes Int
+  actualMinutes   Int?
+  isCommute       Boolean   @default(false)
+  routeId         String?
+  createdAt       DateTime  @default(now())
+
+  @@map("travel_session")
+}
+
+model LocationReminder {
+  id             String            @id @default(cuid())
+  profileId      Int
+  geofenceId     String?
+  title          String
+  message        String
+  triggerType    String
+  stayDuration   Int?
+  isActive       Boolean           @default(true)
+  repeatType     String            @default("always")
+  lastTriggered  DateTime?
+  timesTriggered Int               @default(0)
+  linkedHabitId  String?
+  linkedTodoId   String?
+  priority       String            @default("medium")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  geofence       LocationGeofence? @relation(fields: [geofenceId], references: [id], onDelete: Cascade)
+
+  @@map("location_reminder")
+}
+
+model LocationSuggestion {
+  id                String    @id @default(cuid())
+  profileId         Int
+  latitude          Float
+  longitude         Float
+  name              String
+  category          String
+  reason            String
+  confidence        Float     @default(0.5)
+  basedOn           String
+  dismissed         Boolean   @default(false)
+  accepted          Boolean   @default(false)
+  createdGeofenceId String?
+  createdAt         DateTime  @default(now())
+  expiresAt         DateTime?
+
+  @@map("location_suggestion")
+}
+
+model UserGoal {
+  id        String   @id @default(cuid())
+  profileId Int      @unique
+  purpose   String
+  identity  String?
+  bigWhy    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("user_goal")
+}
+
+model DailyIntention {
+  id             String   @id @default(cuid())
+  profileId      Int
+  date           DateTime @default(now())
+  morningFeeling String
+  oneBigWin      String
+  completed      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, date])
+  @@map("daily_intention")
+}
+
+model DailyReflection {
+  id              String   @id @default(cuid())
+  profileId       Int
+  date            DateTime @default(now())
+  dayRating       String
+  oneWin          String
+  oneLearning     String?
+  gratitude       String?
+  habitsCompleted Int      @default(0)
+  focusMinutes    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, date])
+  @@map("daily_reflection")
+}
+
+model WeeklyReflection {
+  id                String   @id @default(cuid())
+  profileId         Int
+  weekStartDate     DateTime // Monday of the week
+  weekEndDate       DateTime // Sunday of the week
+  overallRating     String   // 1-5 scale or mood
+  biggestWin        String
+  keyLearning       String?
+  areasToImprove    String?
+  nextWeekFocus     String?
+  habitsConsistency Int      @default(0) // 0-100 percentage
+  focusHoursLogged  Float    @default(0)
+  moodPattern       String?  // JSON array of mood data
+  insights          String?  // AI-generated or template-based insights
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  profile           Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, weekStartDate])
+  @@map("weekly_reflection")
+}
+
+model MonthlyReflection {
+  id                  String   @id @default(cuid())
+  profileId           Int
+  year                Int
+  month               Int // 1-12
+  overallRating       String
+  biggestAccomplishment String
+  keyLessonsLearned   String?
+  areasForGrowth      String?
+  nextMonthPriorities String? // JSON array
+  habitsCompleted     Int      @default(0)
+  totalFocusHours     Float    @default(0)
+  streaksAchieved     String?  // JSON array of habit streaks
+  topProductiveDay    String?
+  topProductiveHour   Int?
+  moodOverview        String?  // Overall mood summary
+  insights            String?  // Deeper insights or analysis
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  profile             Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, year, month])
+  @@map("monthly_reflection")
+}
+
+model ReflectionPromptTemplate {
+  id              String   @id @default(cuid())
+  reflectionType  String   // "daily" | "weekly" | "monthly"
+  title           String
+  prompts         String   // JSON array of prompt strings
+  category        String   @default("general") // health, productivity, growth, etc.
+  isActive        Boolean  @default(true)
+  usageCount      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("reflection_prompt_template")
+}
+
+model ReflectionSettings {
+  id                      String    @id @default(cuid())
+  profileId               Int       @unique
+  dailyReflectionEnabled  Boolean   @default(true)
+  dailyReflectionTime     String    @default("20:00") // HH:MM format
+  dailyMissedReminderTime String    @default("16:00") // 4 PM gentle reminder
+
+  weeklyReflectionEnabled Boolean   @default(true)
+  weeklyReflectionDay     Int       @default(0) // 0 = Sunday
+  weeklyReflectionTime    String    @default("18:00") // 6 PM
+
+  monthlyReflectionEnabled Boolean  @default(true)
+  monthlyReflectionDay    Int       @default(1) // 1 = last day of month
+  monthlyReflectionTime   String    @default("18:00")
+
+  notificationsEnabled    Boolean   @default(true)
+  tonePref                String    @default("encouraging") // encouraging | direct | gentle
+  showInsights            Boolean   @default(true)
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  profile                 Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("reflection_settings")
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  profileId   Int
+  habitId     String?
+  type        String
+  title       String
+  description String
+  unlockedAt  DateTime @default(now())
+  celebrated  Boolean  @default(false)
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("achievement")
+}
+
+model IdentityStatement {
+  id         String   @id @default(cuid())
+  profileId  Int
+  habitId    String
+  statement  String
+  earnedAt   DateTime @default(now())
+  timesShown Int      @default(0)
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("identity_statement")
+}
+
+model HabitTemplate {
+  id          String              @id @default(cuid())
+  title       String
+  description String?
+  category    String
+  price       Float               @default(0.99)
+  imageUrl    String?
+  isPremium   Boolean             @default(false)
+  isActive    Boolean             @default(true)
+  usageCount  Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  habits      HabitTemplateItem[]
+  purchases   TemplatePurchase[]
+
+  @@map("habit_template")
+}
+
+model HabitTemplateItem {
+  id          String        @id @default(cuid())
+  templateId  String
+  title       String
+  description String?
+  icon        String?
+  color       String        @default("#00D4FF")
+  category    String        @default("general")
+  frequency   String        @default("daily")
+  targetCount Int           @default(1)
+  order       Int           @default(0)
+  timeOfDay   String?
+  createdAt   DateTime      @default(now())
+  template    HabitTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@map("habit_template_item")
+}
+
+model TemplatePurchase {
+  id          String        @id @default(cuid())
+  profileId   Int
+  templateId  String
+  price       Float
+  purchasedAt DateTime      @default(now())
+  imported    Boolean       @default(false)
+  importedAt  DateTime?
+  template    HabitTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  profile     Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, templateId])
+  @@map("template_purchase")
+}
+
+model MissedItem {
+  id              String    @id @default(cuid())
+  profileId       Int
+  itemType        String
+  itemId          String
+  itemTitle       String
+  scheduledTime   DateTime?
+  detectedAt      DateTime  @default(now())
+  responded       Boolean   @default(false)
+  responseType    String?
+  responseNote    String?
+  respondedAt     DateTime?
+  dayOfWeek       Int
+  hourOfDay       Int
+  weatherContext  String?
+  locationContext String?
+  followUpSent    Boolean   @default(false)
+  followUpSentAt  DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([profileId, itemType, itemId])
+  @@index([profileId, detectedAt])
+  @@map("missed_item")
+}
+
+model SkipPattern {
+  id                 String   @id @default(cuid())
+  profileId          Int
+  itemType           String
+  itemId             String
+  totalMisses        Int      @default(1)
+  totalScheduled     Int      @default(1)
+  skipRate           Float    @default(0.0)
+  commonSkipDays     String?
+  commonSkipHours    String?
+  skipReasons        String?
+  suggestedTime      String?
+  suggestedDays      String?
+  suggestedFrequency String?
+  confidenceScore    Float    @default(0.5)
+  lastUpdated        DateTime @default(now())
+  createdAt          DateTime @default(now())
+
+  @@unique([profileId, itemType, itemId])
+  @@map("skip_pattern")
+}
+
+model AdaptiveNotification {
+  id               String    @id @default(cuid())
+  profileId        Int
+  missedItemId     String?
+  notificationType String
+  title            String
+  message          String
+  scheduledFor     DateTime
+  sentAt           DateTime?
+  opened           Boolean   @default(false)
+  openedAt         DateTime?
+  actionTaken      String?
+  actionTakenAt    DateTime?
+  wasHelpful       Boolean?
+  createdAt        DateTime  @default(now())
+
+  @@index([profileId, scheduledFor])
+  @@index([profileId, notificationType])
+  @@map("adaptive_notification")
+}
+
+// ============================================================
+// SONIC PENTAGRAM - Multi-dimensional Music Critique System
+// ============================================================
+
+model Track {
+  id           String                @id @default(cuid())
+  spotifyId    String?               @unique
+  title        String
+  artist       String
+  album        String?
+  duration     Int?
+  imageUrl     String?
+  previewUrl   String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  scores       TrackScore[]
+  aggregate    TrackScoreAggregate?
+  playHistory  PlayHistory[]
+
+  @@index([spotifyId])
+  @@map("track")
+}
+
+model TrackScore {
+  id         String   @id @default(cuid())
+
+  // The 5 Pillars of RDM Critique (Stored as 0-100 integers)
+  lyricism   Int      @default(50)
+  production Int      @default(50)
+  vocals     Int      @default(50)
+  flow       Int      @default(50)
+  vibe       Int      @default(50)
+
+  comment    String?
+  isSpoiler  Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  profileId  Int
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  trackId    String
+  track      Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, trackId])
+  @@index([trackId])
+  @@map("track_score")
+}
+
+model TrackScoreAggregate {
+  trackId        String   @id
+  track          Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  avgLyricism    Float    @default(0)
+  avgProduction  Float    @default(0)
+  avgVocals      Float    @default(0)
+  avgFlow        Float    @default(0)
+  avgVibe        Float    @default(0)
+
+  totalReviews   Int      @default(0)
+
+  updatedAt      DateTime @updatedAt
+
+  @@map("track_score_aggregate")
+}
+
+model UserPreference {
+  id        String   @id @default(cuid())
+  profileId Int      @unique
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  // Taste Weights (0.0 - 2.0) - How much does the user care about each dimension?
+  weightLyricism    Float @default(1.0)
+  weightProduction  Float @default(1.0)
+  weightVocals      Float @default(1.0)
+  weightFlow        Float @default(1.0)
+  weightVibe        Float @default(1.0)
+
+  // Discovery preferences
+  discoverySensitivity Float @default(0.5) // How adventurous are they?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_preference")
+}
+
+model PlayHistory {
+  id          String   @id @default(cuid())
+  profileId   Int
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  trackId     String
+  track       Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  playedAt    DateTime @default(now())
+  playCount   Int      @default(1)
+
+  // Flag to prompt for rating after 3 plays
+  ratingPrompted Boolean @default(false)
+
+  @@unique([profileId, trackId])
+  @@index([profileId, playedAt])
+  @@map("play_history")
+}
+
+// ============================================================
+// SMART NOTIFICATIONS - Behavioral Intelligence System
+// ============================================================
+
+model UserEngagementLog {
+  id        String   @id @default(cuid())
+  profileId Int
+  eventType String   // app_open, habit_complete, todo_complete, notification_opened, notification_acted, reflection_done
+  metadata  String?  // JSON - habitId, todoId, notificationId, etc.
+  timestamp DateTime @default(now())
+
+  @@index([profileId, eventType])
+  @@index([profileId, timestamp])
+  @@map("user_engagement_log")
+}
+
+model EngagementPattern {
+  id               String   @id @default(cuid())
+  profileId        Int      @unique
+  peakHours        String?  // JSON array of hours ranked by activity e.g. [9,8,10,20,21]
+  peakDays         String?  // JSON array of days ranked by activity e.g. [1,2,3,4,5]
+  avgFirstOpenHour Float?   // e.g. 8.5 = 8:30am
+  avgLastOpenHour  Float?   // e.g. 21.0 = 9:00pm
+  avgCompletionHours String? // JSON map of habitId -> avg hour e.g. {"abc": 9.5, "def": 18.0}
+  lastAppOpen      DateTime?
+  appOpensToday    Int      @default(0)
+  totalDataPoints  Int      @default(0)
+  confidenceScore  Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("engagement_pattern")
+}
+
+model NotificationPreference {
+  id              String   @id @default(cuid())
+  profileId       Int      @unique
+  enabled         Boolean  @default(true)
+  maxPerDay       Int      @default(5)
+  quietHoursStart String   @default("22:00")
+  quietHoursEnd   String   @default("07:00")
+  enabledTypes    String   @default("[\"morning_nudge\",\"missed_habit\",\"streak_risk\",\"protocol_risk\",\"evening_reflection\",\"encouragement\",\"comeback\"]") // JSON array
+  tonePref        String   @default("motivational") // motivational | casual | direct
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("notification_preference")
+}
+
+model SmartNotificationLog {
+  id                  String    @id @default(cuid())
+  profileId           Int
+  notificationType    String    // morning_nudge, missed_habit, streak_risk, protocol_risk, evening_reflection, encouragement, comeback
+  habitId             String?
+  title               String
+  message             String
+  scheduledFor        DateTime
+  sentAt              DateTime?
+  openedAt            DateTime?
+  actedOn             Boolean   @default(false)
+  actedAt             DateTime?
+  completionWithin1h  Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+
+  @@index([profileId, createdAt])
+  @@index([profileId, notificationType])
+  @@index([profileId, scheduledFor])
+  @@map("smart_notification_log")
+}

@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Habit",
+    "slug": "habit",
+    "scheme": "habit",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "icon": "./assets/adaptive-icon.png",
+    "splash": {
+      "image": "./assets/adaptive-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#050813"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.habit.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Habit uses your location to trigger smart reminders when you arrive at or leave places you care about.",
+        "NSCameraUsageDescription": "Habit uses the camera to let you capture tasks from photos.",
+        "NSPhotoLibraryUsageDescription": "Habit accesses your photo library to let you extract tasks from images.",
+        "UIBackgroundModes": []
+      }
+    },
+    "android": {
+      "package": "com.habit.app",
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#050813"
+      }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#00D4FF",
+          "defaultChannel": "default"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "019a38cf-2778-77ac-a682-dafcd572b182"
+      }
+    }
+  }
+}
