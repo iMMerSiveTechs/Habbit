@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { View, Text, ScrollView, Pressable, RefreshControl, TextInput } from "react-native";
 import { BottomTabScreenProps } from "@/navigation/types";
 import { LinearGradient } from "expo-linear-gradient";
@@ -7,13 +7,14 @@ import { AddHabitModal } from "@/components/AddHabitModal";
 import { EditHabitModal } from "@/components/EditHabitModal";
 import { HabitCardSkeleton } from "@/components/SkeletonLoader";
 import { InteractiveHabitCard } from "@/components/InteractiveHabitCard";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { CommandDeck } from "@/components/CommandDeck";
 import { ForgeProtocolModal } from "@/components/ForgeProtocolModal";
 import { MatrixHeatmap } from "@/components/MatrixHeatmap";
 import { QuickReportModal } from "@/components/QuickReportModal";
 import { ProtocolAnalyticsModal } from "@/components/ProtocolAnalyticsModal";
-import { Plus, Circle, CheckCircle2, Pencil, AlertCircle, ShoppingBag, Shield, BarChart3 } from "lucide-react-native";
+import { Plus, Circle, CheckCircle2, Pencil, AlertCircle, ShoppingBag, Shield, BarChart3, Search, X } from "lucide-react-native";
 import { useHabitsStore } from "@/state/habitsStore";
 import { useAppStore } from "@/state/appStore";
 import { useGatedNavigation } from "@/hooks/useGatedNavigation";
@@ -41,6 +42,8 @@ export default function HabitsScreenConnected({ navigation }: Props) {
   const [showQuickReport, setShowQuickReport] = useState(false);
   const [weeklyReport, setWeeklyReport] = useState<any>(null);
   const [intentionInput, setIntentionInput] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const debouncedSearch = useDebouncedValue(searchText, 300);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [analyticsHabit, setAnalyticsHabit] = useState<any>(null);
   const { habits, setHabits, addHabit, updateHabit, completeHabit, removeHabit, loading, setLoading, error, setError } = useHabitsStore();
@@ -50,6 +53,18 @@ export default function HabitsScreenConnected({ navigation }: Props) {
   const setIntegrity = useAppStore(s => s.setIntegrity);
   const setXp = useAppStore(s => s.setXp);
   const { data: session } = useSession();
+
+  const filteredHabits = useMemo(() => {
+    let filtered = habits;
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((h) => h.category === selectedCategory);
+    }
+    if (debouncedSearch.trim()) {
+      const query = debouncedSearch.trim().toLowerCase();
+      filtered = filtered.filter((h) => h.title?.toLowerCase().includes(query));
+    }
+    return filtered;
+  }, [habits, selectedCategory, debouncedSearch]);
 
   useEffect(() => {
     if (!session) return;
@@ -378,6 +393,28 @@ export default function HabitsScreenConnected({ navigation }: Props) {
             />
           )}
 
+          {/* Search Input */}
+          {!loading && habits.length > 0 && (
+            <View className="px-5 mb-2">
+              <View className="flex-row items-center bg-white/5 border border-white/10 rounded-2xl px-4 h-12">
+                <Search size={18} color="rgba(255,255,255,0.4)" />
+                <TextInput
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  placeholder="Search habits..."
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  className="flex-1 ml-3 text-white font-medium"
+                  autoCorrect={false}
+                />
+                {searchText.length > 0 && (
+                  <Pressable onPress={() => setSearchText('')} className="p-1">
+                    <X size={16} color="rgba(255,255,255,0.5)" />
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Matrix Heatmap */}
           {!loading && habits.length > 0 && (
             <View className="px-5">
@@ -501,12 +538,7 @@ export default function HabitsScreenConnected({ navigation }: Props) {
             {/* Habits List */}
             {!loading && !error && habits.length > 0 && (
               <>
-                {habits
-                  .filter((habit) => {
-                    if (selectedCategory === "all") return true;
-                    return habit.category === selectedCategory;
-                  })
-                  .map((habit) => {
+                {filteredHabits.map((habit) => {
                 const isCompleting = completingHabits.has(habit.id);
                 return (
                   <Pressable

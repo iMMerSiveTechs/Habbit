@@ -304,6 +304,8 @@ export default function SettingsScreen({ navigation }: Props) {
             <View className="flex-row">
               {subscriptionTier !== "elite" && (
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={subscriptionTier === "preview" ? "Upgrade plan" : "Upgrade to a higher plan"}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     navigation.navigate("Upgrade", undefined);
@@ -319,6 +321,8 @@ export default function SettingsScreen({ navigation }: Props) {
                 </Pressable>
               )}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Restore purchases"
                 onPress={async () => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   const success = await restore();
@@ -356,6 +360,9 @@ export default function SettingsScreen({ navigation }: Props) {
                     </Text>
                   </View>
                   <Switch
+                    accessibilityRole="switch"
+                    accessibilityLabel="Skip onboarding"
+                    accessibilityState={{ checked: skipOnboarding }}
                     value={skipOnboarding}
                     onValueChange={handleToggleOnboarding}
                     trackColor={{ false: "#374151", true: "#00D4FF" }}
@@ -365,6 +372,8 @@ export default function SettingsScreen({ navigation }: Props) {
               </GlassCard>
 
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Test location onboarding"
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   navigation.navigate("LocationOnboarding");
@@ -401,6 +410,9 @@ export default function SettingsScreen({ navigation }: Props) {
                 </View>
               </View>
               <Switch
+                accessibilityRole="switch"
+                accessibilityLabel="Voice feedback"
+                accessibilityState={{ checked: voiceEnabled }}
                 value={voiceEnabled}
                 onValueChange={handleToggleVoice}
                 trackColor={{ false: "#374151", true: "#00D4FF" }}
@@ -411,6 +423,8 @@ export default function SettingsScreen({ navigation }: Props) {
 
           <View className="px-5 space-y-3">
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Profile"
               onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
               className="active:scale-95"
             >
@@ -421,6 +435,9 @@ export default function SettingsScreen({ navigation }: Props) {
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+              accessibilityHint="Double tap to manage notification settings"
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 navigation.navigate("NotificationSettings");
@@ -435,6 +452,8 @@ export default function SettingsScreen({ navigation }: Props) {
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Theme: ${themeMode === 'ice' ? 'ICE' : 'PRIME'}. Tap to switch`}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setThemeMode(themeMode === 'ice' ? 'prime' : 'ice');
@@ -456,6 +475,8 @@ export default function SettingsScreen({ navigation }: Props) {
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Location reminders"
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 gatedNav.navigateGated("LocationReminder", undefined, "pro", "Location Reminders");
@@ -474,6 +495,8 @@ export default function SettingsScreen({ navigation }: Props) {
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Plan tomorrow"
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 navigation.navigate("PlanTomorrowScreen" as never);
@@ -487,6 +510,9 @@ export default function SettingsScreen({ navigation }: Props) {
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Vault"
+              accessibilityHint="Double tap to view archived and failed protocols"
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 navigation.navigate("Vault");
@@ -555,6 +581,9 @@ export default function SettingsScreen({ navigation }: Props) {
             </View>
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Export data"
+              accessibilityHint="Double tap to download your habits and todos as CSV"
               onPress={() => {
                 if (!meetsMinimumTier(subscriptionTier, "core")) {
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -588,6 +617,9 @@ export default function SettingsScreen({ navigation }: Props) {
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Data vault"
+              accessibilityHint="Double tap to backup and restore your data as JSON"
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setShowDataVault(true);
@@ -610,6 +642,8 @@ export default function SettingsScreen({ navigation }: Props) {
 
             <GlassCard className="mb-3">
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Privacy policy"
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   openUrl(PRIVACY_POLICY_URL, "Privacy Policy");
@@ -624,6 +658,8 @@ export default function SettingsScreen({ navigation }: Props) {
               </Pressable>
               <View className="h-px bg-white/10 mx-5" />
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Terms of service"
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   openUrl(TERMS_OF_SERVICE_URL, "Terms of Service");
@@ -638,6 +674,9 @@ export default function SettingsScreen({ navigation }: Props) {
               </Pressable>
               <View className="h-px bg-white/10 mx-5" />
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Contact support"
+                accessibilityHint="Double tap to send an email to support"
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   Linking.openURL("mailto:immersivetechs@icloud.com");
@@ -657,6 +696,8 @@ export default function SettingsScreen({ navigation }: Props) {
             </Text>
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Sign out"
               onPress={handleSignOut}
               className="mt-2 active:scale-95"
             >
@@ -667,6 +708,9 @@ export default function SettingsScreen({ navigation }: Props) {
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Delete account"
+              accessibilityHint="Double tap to permanently delete your account and all data"
               onPress={handleDeleteAccount}
               className="mt-3 mb-2 active:scale-95"
             >

@@ -12,26 +12,28 @@ import {
   type HabitTemplate,
   type TemplatePurchase,
 } from "../../../shared/contracts";
+import { meetsMinimumTier } from "../tierGuard";
 
 const marketplace = new Hono<AppType>();
 
 // GET /api/templates/marketplace - Get all available templates
 marketplace.get("/", async (c) => {
-  const user = c.get("user");
-  if (!user) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
+  try {
+    const user = c.get("user");
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
 
-  const profile = await db.profile.findUnique({
-    where: { userId: user.id },
-  });
+    const profile = await db.profile.findUnique({
+      where: { userId: user.id },
+    });
 
-  if (!profile) {
-    return c.json({ error: "Profile not found" }, 404);
-  }
+    if (!profile) {
+      return c.json({ error: "Profile not found" }, 404);
+    }
 
-  // Get all active templates with their habits
-  const templates = await db.habitTemplate.findMany({
+    // Get all active templates with their habits
+    const templates = await db.habitTemplate.findMany({
     where: { isActive: true },
     include: {
       habits: {
@@ -87,7 +89,11 @@ marketplace.get("/", async (c) => {
     };
   });
 
-  return c.json({ templates: formattedTemplates });
+    return c.json({ templates: formattedTemplates });
+  } catch (error) {
+    console.error(`[Marketplace] Error:`, error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
 });
 
 // POST /api/templates/marketplace/:id/purchase - Purchase a template
@@ -95,10 +101,11 @@ marketplace.post(
   "/:id/purchase",
   zValidator("json", purchaseTemplateRequestSchema),
   async (c) => {
-    const user = c.get("user");
-    if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
+    try {
+      const user = c.get("user");
+      if (!user) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
 
     const profile = await db.profile.findUnique({
       where: { userId: user.id },
@@ -106,6 +113,12 @@ marketplace.post(
 
     if (!profile) {
       return c.json({ error: "Profile not found" }, 404);
+    }
+
+    // Tier check: require at least "pro" to purchase templates
+    const userTier = profile.subscriptionTier || "free";
+    if (!meetsMinimumTier(userTier, "pro")) {
+      return c.json({ error: "Upgrade to Pro to purchase marketplace templates" }, 403);
     }
 
     const templateId = c.req.param("id");
@@ -200,6 +213,10 @@ marketplace.post(
       purchase: formattedPurchase,
       template: formattedTemplate,
     });
+    } catch (error) {
+      console.error(`[Marketplace] Error:`, error);
+      return c.json({ error: "Internal server error" }, 500);
+    }
   }
 );
 
@@ -208,6 +225,7 @@ marketplace.post(
   "/:id/import",
   zValidator("json", importTemplateRequestSchema),
   async (c) => {
+    try {
     const user = c.get("user");
     if (!user) {
       return c.json({ error: "Unauthorized" }, 401);
@@ -334,11 +352,16 @@ marketplace.post(
       success: true,
       habitsCreated: formattedHabits,
     });
+    } catch (error) {
+      console.error(`[Marketplace] Error:`, error);
+      return c.json({ error: "Internal server error" }, 500);
+    }
   }
 );
 
 // GET /api/templates/marketplace/purchases - Get user's purchased templates
 marketplace.get("/purchases", async (c) => {
+  try {
   const user = c.get("user");
   if (!user) {
     return c.json({ error: "Unauthorized" }, 401);
@@ -408,6 +431,10 @@ marketplace.get("/purchases", async (c) => {
   }));
 
   return c.json({ purchases: formattedPurchases });
+  } catch (error) {
+    console.error(`[Marketplace] Error:`, error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
 });
 
 export default marketplace;

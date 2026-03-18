@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, LinkingOptions } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { queryClient } from "@/lib/queryClient";
 import RootStackNavigator from "@/navigation/RootNavigator";
@@ -17,6 +17,51 @@ import { NotificationActionHandler, navigationRef } from "@/services/notificatio
 import { AdaptiveIntelligenceService } from "@/services/adaptiveIntelligence";
 import { OfflineSyncBanner } from "@/components/OfflineSyncBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import * as Linking from "expo-linking";
+
+const prefix = Linking.createURL('/');
+
+const linking: LinkingOptions<any> = {
+  prefixes: ['habbit://', prefix],
+  config: {
+    screens: {
+      Tabs: {
+        screens: {
+          TodayTab: 'today',
+          HabitsTab: 'habits',
+          TodosTab: 'todos',
+          CalendarTab: 'calendar',
+          InsightsTab: 'insights',
+          SettingsTab: 'settings',
+        },
+      },
+      HabitDetailScreen: 'habit/:id',
+      EditHabit: 'habit/:id/edit',
+      LoginModalScreen: 'login',
+      ForgotPassword: 'forgot-password',
+      MorningActivation: 'morning-activation',
+      TodaysPlan: 'todays-plan',
+      PlanTomorrowScreen: 'plan-tomorrow',
+      EveningReflection: 'evening-reflection',
+      AchievementCelebration: 'achievement',
+      WeeklyInsights: 'weekly-insights',
+      PatternInsights: 'pattern-insights',
+      CategoryAnalytics: 'category-analytics',
+      AdvancedAnalytics: 'advanced-analytics',
+      Marketplace: 'marketplace',
+      Vault: 'vault',
+      CerebraCoach: 'coach',
+      Upgrade: 'upgrade',
+      NotificationSettings: 'notification-settings',
+      Welcome: 'welcome',
+      Pricing: 'pricing',
+      Contract: 'contract',
+      ProfileSetup: 'profile-setup',
+      LocationOnboarding: 'location-onboarding',
+      LocationReminder: 'location-reminder',
+    },
+  },
+};
 
 // v1.0.1 - Cache cleared
 export default function App() {
@@ -90,7 +135,7 @@ export default function App() {
         <KeyboardProvider>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <SafeAreaProvider>
-              <NavigationContainer ref={navigationRef}>
+              <NavigationContainer ref={navigationRef} linking={linking}>
                 <RootStackNavigator />
                 <OfflineSyncBanner />
                 <StatusBar style="light" />

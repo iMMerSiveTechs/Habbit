@@ -267,6 +267,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
           {/* Morning Activation Prompt */}
           {shouldShowMorningPrompt() && (
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Start your morning"
+              accessibilityHint="Double tap to set your intention for the day"
               onPress={() => {
                 navigation.navigate("MorningActivation");
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -294,6 +297,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
           {/* Evening Reflection Prompt */}
           {shouldShowEveningPrompt() && (
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Reflect on your day"
+              accessibilityHint="Double tap to capture wins and insights"
               onPress={() => {
                 navigation.navigate("EveningReflection");
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -338,6 +344,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
                 return (
                   <Pressable
                     key={index}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${isActiveBlock ? "Stop" : "Start"} focus block: ${block.task}`}
+                    accessibilityHint={isActiveBlock ? "Double tap to stop this focus block" : "Double tap to start this focus block"}
                     onPress={async () => {
                       if (isActiveBlock) {
                         // Already running this block -- stop it
@@ -414,6 +423,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
 
           {/* Cerebra Coach Entry */}
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open Cerebra Coach"
+            accessibilityHint="Double tap to open the AI accountability partner"
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               gatedNav.navigateGated("CerebraCoach", undefined, "pro", "Cerebra AI Coach");
@@ -450,6 +462,8 @@ export default function TodayScreenConnected({ navigation }: Props) {
               <View className="flex-row items-center justify-between mb-4">
                 <Text className="text-white/60 text-xs font-semibold tracking-wider">TODAY&apos;S HABITS</Text>
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="View all habits"
                   onPress={() => {
                     navigation.navigate("HabitsTab");
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -463,6 +477,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
               {habits.map((habit: any, index: number) => (
                 <Pressable
                   key={habit.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${habit.completedToday >= habit.targetCount ? "Completed" : "Complete"} habit: ${habit.title}, ${habit.completedToday} of ${habit.targetCount}`}
+                  accessibilityHint="Double tap to mark this habit as complete"
                   onPress={async () => {
                     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     try {
@@ -526,6 +543,8 @@ export default function TodayScreenConnected({ navigation }: Props) {
               <View className="flex-row items-center justify-between mb-4">
                 <Text className="text-white/60 text-xs font-semibold tracking-wider">ACTIVE TODOS</Text>
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="View all todos"
                   onPress={() => {
                     navigation.navigate("TodosTab");
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -544,6 +563,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
                 return (
                   <Pressable
                     key={todo.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Todo: ${todo.title}, ${todo.priority} priority`}
+                    accessibilityHint="Double tap to view this todo"
                     onPress={async () => {
                       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       navigation.navigate("TodosTab");
@@ -586,6 +608,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
               )}
               <View className="flex-row items-center gap-3">
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={isRunning ? "Stop focus session" : "Start focus session"}
+                  accessibilityHint={isRunning ? "Double tap to stop the current focus session" : "Double tap to choose a task and start focusing"}
                   onPress={isRunning ? handleStopFocus : () => {
                     setShowTaskPicker(true);
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -596,6 +621,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
                 </Pressable>
                 {!isRunning && (
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Set timer duration"
+                    accessibilityHint="Double tap to set a custom focus timer duration"
                     onPress={() => {
                       setShowTimerPicker(true);
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -627,6 +655,8 @@ export default function TodayScreenConnected({ navigation }: Props) {
                 <Text className="text-white/60 text-sm mb-4 text-center">Enter duration in minutes (1-180)</Text>
 
                 <TextInput
+                  accessibilityLabel="Timer duration in minutes"
+                  accessibilityHint="Enter a number between 1 and 180"
                   value={customMinutes}
                   onChangeText={setCustomMinutes}
                   keyboardType="number-pad"
@@ -639,6 +669,8 @@ export default function TodayScreenConnected({ navigation }: Props) {
 
                 <View className="flex-row gap-3">
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel timer setting"
                     onPress={() => {
                       setShowTimerPicker(false);
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -648,6 +680,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
                     <Text className="text-white/60 font-semibold text-center">Cancel</Text>
                   </Pressable>
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Set timer"
+                    accessibilityHint="Double tap to confirm the timer duration"
                     onPress={handleSetCustomTimer}
                     className="flex-1 px-6 py-3 bg-neon-cyan/20 border border-neon-cyan/50 rounded-full active:scale-95"
                   >
@@ -680,6 +715,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
                     {TASK_OPTIONS.map((option) => (
                       <Pressable
                         key={option.name}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Focus on ${option.name}`}
+                        accessibilityHint="Double tap to select this task and start focusing"
                         onPress={() => handleTaskSelection(option.name)}
                         className="flex-row items-center bg-white/5 border border-white/10 rounded-2xl p-4 active:scale-95"
                       >
@@ -699,6 +737,8 @@ export default function TodayScreenConnected({ navigation }: Props) {
                 </ScrollView>
 
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel task selection"
                   onPress={() => {
                     setShowTaskPicker(false);
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -731,6 +771,9 @@ export default function TodayScreenConnected({ navigation }: Props) {
 
         {/* Flow Capture FAB */}
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Quick flow capture"
+          accessibilityHint="Double tap to start a flow session"
           onPress={() => {
             setShowFlowCapture(true);
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

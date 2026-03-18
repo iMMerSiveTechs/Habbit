@@ -1,13 +1,76 @@
 import { api as authApi } from "./api";
+import type {
+  Habit,
+  HabitEvent,
+  FocusSession,
+  Achievement,
+  CerebraQueryResponse,
+  DailyBriefing,
+  UserGoal,
+  DailyIntention,
+  DailyReflection,
+  IdentityStatement,
+  LocationReminder,
+  LocationSuggestion,
+  GetEmotionalDashboardResponse,
+} from "@/shared/contracts";
+
+interface Geofence {
+  id: string;
+  profileId: number;
+  name: string;
+  category: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  linkedHabits: string[];
+  linkedTodos: string[];
+  onEnter: string | null;
+  onExit: string | null;
+  weatherConditions: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface LocationVisit {
+  id: string;
+  geofenceId: string;
+  arrivedAt: string | null;
+  departedAt: string | null;
+  moodBefore: number | null;
+  moodAfter: number | null;
+  productivity: number | null;
+  createdAt: string;
+}
+
+interface LocationPattern {
+  geofenceId: string;
+  name: string;
+  visitCount: number;
+  avgDuration: number | null;
+  avgMood: number | null;
+  avgProductivity: number | null;
+  mostCommonDay: string | null;
+  mostCommonTime: string | null;
+}
+
+interface MoodMapEntry {
+  geofenceId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  avgMood: number;
+  visitCount: number;
+}
 
 export const api = {
   // Habits
   async getHabits() {
-    return authApi.get<any>("/api/habits");
+    return authApi.get<{ habits: Habit[] }>("/api/habits");
   },
 
   async getHabit(habitId: string) {
-    return authApi.get<any>(`/api/habits/${habitId}`);
+    return authApi.get<{ habit: Habit }>(`/api/habits/${habitId}`);
   },
 
   async createHabit(data: {
@@ -23,17 +86,17 @@ export const api = {
     reminderTime?: string;
     reminderEnabled?: boolean;
   }) {
-    return authApi.post<any>("/api/habits", data);
+    return authApi.post<{ habit: Habit }>("/api/habits", data);
   },
 
   async completeHabit(habitId: string, mood?: number, note?: string) {
     const today = new Date().toISOString().split("T")[0];
     const clientEventId = `complete-${habitId}-${today}`;
-    return authApi.post<any>(`/api/habits/${habitId}/complete`, { mood, note, clientEventId });
+    return authApi.post<{ habit: Habit; event: HabitEvent; streak: number }>(`/api/habits/${habitId}/complete`, { mood, note, clientEventId });
   },
 
   async getHabitStreak(habitId: string) {
-    return authApi.get<{ currentStreak: number; longestStreak: number; completions: any[] }>(`/api/habits/${habitId}/streak`);
+    return authApi.get<{ currentStreak: number; longestStreak: number; completions: HabitEvent[] }>(`/api/habits/${habitId}/streak`);
   },
 
   async updateHabit(habitId: string, data: {
@@ -49,11 +112,11 @@ export const api = {
     recurringDays?: number[];
     reminderTime?: string;
   }) {
-    return authApi.patch<any>(`/api/habits/${habitId}`, data);
+    return authApi.patch<{ habit: Habit }>(`/api/habits/${habitId}`, data);
   },
 
   async deleteHabit(habitId: string) {
-    return authApi.delete<any>(`/api/habits/${habitId}`);
+    return authApi.delete<{ success: boolean }>(`/api/habits/${habitId}`);
   },
 
   async skipHabit(habitId: string, reason?: string) {
@@ -65,33 +128,33 @@ export const api = {
 
   // Focus Sessions
   async getActiveSession() {
-    return authApi.get<any>("/api/focus/active");
+    return authApi.get<{ session: FocusSession | null }>("/api/focus/active");
   },
 
   async startFocusSession(task: string) {
-    return authApi.post<any>("/api/focus/start", { task });
+    return authApi.post<{ session: FocusSession }>("/api/focus/start", { task });
   },
 
   async endFocusSession(id: string, completed: boolean) {
-    return authApi.post<any>("/api/focus/end", { id, completed });
+    return authApi.post<{ session: FocusSession }>("/api/focus/end", { id, completed });
   },
 
   async getRecentSessions() {
-    return authApi.get<any>("/api/focus/recent");
+    return authApi.get<{ sessions: FocusSession[] }>("/api/focus/recent");
   },
 
   // Cerebra
-  async queryCerebra(query: string, context?: any) {
-    return authApi.post<any>("/api/cerebra/query", { query, context });
+  async queryCerebra(query: string, context?: Record<string, unknown>) {
+    return authApi.post<CerebraQueryResponse>("/api/cerebra/query", { query, context });
   },
 
   async getDailyBriefing() {
-    return authApi.get<any>("/api/cerebra/briefing");
+    return authApi.get<DailyBriefing>("/api/cerebra/briefing");
   },
 
   // Location
   async getGeofences() {
-    return authApi.get<{ geofences: any[] }>("/api/location/geofences");
+    return authApi.get<{ geofences: Geofence[] }>("/api/location/geofences");
   },
 
   async createGeofence(data: {
@@ -106,7 +169,7 @@ export const api = {
     onExit?: string;
     weatherConditions?: string[];
   }) {
-    return authApi.post<{ geofence: any }>("/api/location/geofences", data);
+    return authApi.post<{ geofence: Geofence }>("/api/location/geofences", data);
   },
 
   async deleteGeofence(geofenceId: string) {
@@ -125,7 +188,7 @@ export const api = {
     onExit?: string;
     weatherConditions?: string[];
   }) {
-    return authApi.patch<{ geofence: any }>(`/api/location/geofences/${geofenceId}`, data);
+    return authApi.patch<{ geofence: Geofence }>(`/api/location/geofences/${geofenceId}`, data);
   },
 
   async recordLocationVisit(data: {
@@ -136,20 +199,20 @@ export const api = {
     moodAfter?: number;
     productivity?: number;
   }) {
-    return authApi.post<{ visit: any }>("/api/location/visits", data);
+    return authApi.post<{ visit: LocationVisit }>("/api/location/visits", data);
   },
 
   async getLocationPatterns() {
-    return authApi.get<{ patterns: any[] }>("/api/location/patterns");
+    return authApi.get<{ patterns: LocationPattern[] }>("/api/location/patterns");
   },
 
   async getMoodMap() {
-    return authApi.get<{ moodMap: any }>("/api/location/mood-map");
+    return authApi.get<{ moodMap: MoodMapEntry[] }>("/api/location/mood-map");
   },
 
   // Location Reminders
   async getLocationReminders() {
-    return authApi.get<{ reminders: any[] }>("/api/location/reminders");
+    return authApi.get<{ reminders: LocationReminder[] }>("/api/location/reminders");
   },
 
   async createLocationReminder(data: {
@@ -163,7 +226,7 @@ export const api = {
     linkedTodoId?: string;
     priority?: "low" | "medium" | "high";
   }) {
-    return authApi.post<{ reminder: any }>("/api/location/reminders", data);
+    return authApi.post<{ reminder: LocationReminder }>("/api/location/reminders", data);
   },
 
   async updateLocationReminder(reminderId: string, data: {
@@ -177,7 +240,7 @@ export const api = {
     linkedTodoId?: string;
     priority?: "low" | "medium" | "high";
   }) {
-    return authApi.patch<{ reminder: any }>(`/api/location/reminders/${reminderId}`, data);
+    return authApi.patch<{ reminder: LocationReminder }>(`/api/location/reminders/${reminderId}`, data);
   },
 
   async deleteLocationReminder(reminderId: string) {
@@ -186,7 +249,7 @@ export const api = {
 
   // Location Suggestions
   async getLocationSuggestions() {
-    return authApi.get<{ suggestions: any[] }>("/api/location/suggestions");
+    return authApi.get<{ suggestions: LocationSuggestion[] }>("/api/location/suggestions");
   },
 
   async dismissLocationSuggestion(suggestionId: string) {
@@ -198,16 +261,16 @@ export const api = {
     category?: string;
     radius?: number;
   }) {
-    return authApi.post<{ geofence: any }>(`/api/location/suggestions/${suggestionId}/accept`, data);
+    return authApi.post<{ geofence: Geofence }>(`/api/location/suggestions/${suggestionId}/accept`, data);
   },
 
   async generateLocationSuggestions() {
-    return authApi.post<{ suggestions: any[] }>("/api/location/suggestions/generate");
+    return authApi.post<{ suggestions: LocationSuggestion[] }>("/api/location/suggestions/generate");
   },
 
   // Emotional Core - User Goal
   async getUserGoal() {
-    return authApi.get<any>("/api/emotional/goal");
+    return authApi.get<{ goal: UserGoal | null }>("/api/emotional/goal");
   },
 
   async createUserGoal(data: {
@@ -215,12 +278,12 @@ export const api = {
     identity?: string;
     bigWhy: string;
   }) {
-    return authApi.post<any>("/api/emotional/goal", data);
+    return authApi.post<{ goal: UserGoal }>("/api/emotional/goal", data);
   },
 
   // Emotional Core - Daily Intentions
   async getTodayIntention() {
-    return authApi.get<{ intention: any }>("/api/emotional/intentions/today");
+    return authApi.get<{ intention: DailyIntention | null }>("/api/emotional/intentions/today");
   },
 
   async createDailyIntention(data: {
@@ -228,20 +291,20 @@ export const api = {
     oneBigWin: string;
     date?: string;
   }) {
-    return authApi.post<{ intention: any }>("/api/emotional/intentions", data);
+    return authApi.post<{ intention: DailyIntention }>("/api/emotional/intentions", data);
   },
 
   async completeIntention(intentionId: string) {
-    return authApi.patch<{ intention: any }>(`/api/emotional/intentions/${intentionId}/complete`);
+    return authApi.patch<{ intention: DailyIntention }>(`/api/emotional/intentions/${intentionId}/complete`);
   },
 
   // Emotional Core - Daily Reflections
   async getTodayReflection() {
-    return authApi.get<{ reflection: any }>("/api/reflections/daily/today");
+    return authApi.get<{ reflection: DailyReflection | null }>("/api/reflections/daily/today");
   },
 
   async getRecentReflections() {
-    return authApi.get<{ reflections: any[] }>("/api/reflections/daily/history");
+    return authApi.get<{ reflections: DailyReflection[] }>("/api/reflections/daily/history");
   },
 
   async createDailyReflection(data: {
@@ -251,20 +314,20 @@ export const api = {
     gratitude?: string;
     date?: string;
   }) {
-    return authApi.post<{ reflection: any }>("/api/reflections/daily", data);
+    return authApi.post<{ reflection: DailyReflection }>("/api/reflections/daily", data);
   },
 
   // Emotional Core - Achievements
   async getAchievements() {
-    return authApi.get<any>("/api/emotional/achievements");
+    return authApi.get<{ achievements: Achievement[] }>("/api/emotional/achievements");
   },
 
   async getUncelebratedAchievement() {
-    return authApi.get<any>("/api/emotional/achievements/uncelebrated");
+    return authApi.get<{ achievement: Achievement | null }>("/api/emotional/achievements/uncelebrated");
   },
 
   async markAchievementCelebrated(achievementId: string) {
-    return authApi.patch<any>(`/api/emotional/achievements/${achievementId}/celebrate`, { celebrated: true });
+    return authApi.patch<{ achievement: Achievement }>(`/api/emotional/achievements/${achievementId}/celebrate`, { celebrated: true });
   },
 
   async createAchievement(data: {
@@ -273,16 +336,16 @@ export const api = {
     description: string;
     habitId?: string | null;
   }) {
-    return authApi.post<any>("/api/emotional/achievements/create", data);
+    return authApi.post<{ achievement: Achievement }>("/api/emotional/achievements/create", data);
   },
 
   // Emotional Core - Identity Statements
   async getIdentityStatements() {
-    return authApi.get<any>("/api/emotional/identity");
+    return authApi.get<{ statements: IdentityStatement[] }>("/api/emotional/identity");
   },
 
   // Emotional Core - Dashboard
   async getEmotionalDashboard() {
-    return authApi.get<any>("/api/emotional/dashboard");
+    return authApi.get<GetEmotionalDashboardResponse>("/api/emotional/dashboard");
   },
 };

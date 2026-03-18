@@ -1,3 +1,4 @@
+import React from "react";
 import { View, type ViewProps } from "react-native";
 import { cn } from "@/utils/cn";
 
@@ -7,7 +8,7 @@ interface GlassCardProps extends ViewProps {
   intensity?: "light" | "medium" | "strong";
 }
 
-export function GlassCard({ children, className, intensity = "medium", style, ...props }: GlassCardProps) {
+function GlassCardComponent({ children, className, intensity = "medium", style, ...props }: GlassCardProps) {
   const intensityClasses = {
     light: "bg-white/[0.03]",
     medium: "bg-white/[0.05]",
@@ -36,3 +37,5 @@ export function GlassCard({ children, className, intensity = "medium", style, ..
     </View>
   );
 }
+
+export const GlassCard = React.memo(GlassCardComponent);

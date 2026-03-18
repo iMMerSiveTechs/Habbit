@@ -12,6 +12,8 @@ import { fetch } from "expo/fetch";
 // Import the authentication client to access user session cookies
 import { authClient } from "./authClient";
 
+import { AppState } from "react-native";
+
 // Global session-expired callback registry
 type SessionExpiredListener = () => void;
 const _sessionExpiredListeners: SessionExpiredListener[] = [];
@@ -144,6 +146,18 @@ const fetchFn = async <T>(path: string, options: FetchOptions): Promise<T> => {
       console.log(`[api.ts]: Request timeout for ${path}`);
       throw new Error(`[api.ts]: Request timeout - server did not respond within 15 seconds`);
     }
+
+    // Queue mutation requests for offline sync on network errors
+    // (errors that aren't HTTP response errors — those are thrown above with "[api.ts]:" prefix)
+    const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+    const isNetworkError = !(error?.message?.startsWith?.('[api.ts]:'));
+    if (isMutation && isNetworkError) {
+      // Lazy import to avoid circular dependency (offlineSyncService imports api)
+      const { offlineSyncService } = require('@/services/offlineSyncService');
+      offlineSyncService.queueRequest(method, path, body);
+      console.log(`[api.ts]: Queued ${method} ${path} for offline sync`);
+    }
+
     console.log(`[api.ts]: ${error}`);
     throw error;
   }
@@ -219,6 +233,15 @@ const api = {
    */
   delete: <T>(path: string) => fetchFn<T>(path, { method: "DELETE" }),
 };
+
+// Flush the offline sync queue when the app comes to the foreground
+AppState.addEventListener('change', (state) => {
+  if (state === 'active') {
+    // Lazy import to avoid circular dependency (offlineSyncService imports api)
+    const { offlineSyncService } = require('@/services/offlineSyncService');
+    offlineSyncService.syncQueue();
+  }
+});
 
 // Export the API client and backend URL to be used in other modules
 export { api, BACKEND_URL };

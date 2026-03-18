@@ -3,6 +3,10 @@ import { zValidator } from "@hono/zod-validator";
 import { db } from "../db";
 import type { AppType } from "../index";
 import { cerebraQueryRequestSchema } from "../../../shared/contracts";
+import { getTierLevel } from "../tierGuard";
+
+// Simple in-memory daily query counter: Map<"profileId:YYYY-MM-DD", count>
+const dailyQueryCounts = new Map<string, number>();
 
 const cerebraRouter = new Hono<AppType>()
   // Query Cerebra AI assistant
@@ -27,14 +31,24 @@ const cerebraRouter = new Hono<AppType>()
       return c.json({ error: "Profile not found" }, 404);
     }
 
-    // Check subscription tier
-    if (profile.subscriptionTier !== "elite" && profile.subscriptionTier !== "pro") {
+    // Tier-based daily query limit: free=3, core=10, pro=50, elite=unlimited
+    const userTier = profile.subscriptionTier || "free";
+    const tierLevel = getTierLevel(userTier);
+    const dailyLimit = tierLevel >= 3 ? Infinity : tierLevel >= 2 ? 50 : tierLevel >= 1 ? 10 : 3;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const counterKey = `${profile.id}:${today}`;
+    const currentCount = dailyQueryCounts.get(counterKey) || 0;
+
+    if (currentCount >= dailyLimit) {
       return c.json({
-        response: "Cerebra AI assistant is available with Pro or Elite subscription. Upgrade to unlock personalized insights and predictive intelligence!",
-        suggestion: "Upgrade to Pro for AI-powered coaching",
+        response: `You've reached your daily Cerebra query limit (${dailyLimit}). Upgrade your plan for more queries.`,
+        suggestion: "Upgrade for more daily AI queries",
         actionable: false,
-      });
+      }, 429);
     }
+
+    dailyQueryCounts.set(counterKey, currentCount + 1);
 
     // Get context data
     const habits = await db.habit.findMany({

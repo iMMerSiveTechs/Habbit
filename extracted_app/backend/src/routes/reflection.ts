@@ -4,6 +4,14 @@ import { zValidator } from "@hono/zod-validator";
 import { type AppType } from "../types";
 import { db } from "../db";
 
+function parsePagination(c: any) {
+  const rawLimit = parseInt(c.req.query("limit") || "50", 10);
+  const rawOffset = parseInt(c.req.query("offset") || "0", 10);
+  const limit = Math.max(1, Math.min(100, isNaN(rawLimit) ? 50 : rawLimit));
+  const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
+  return { limit, offset };
+}
+
 const reflectionRouter = new Hono<AppType>();
 
 // ============================================================
@@ -193,23 +201,31 @@ reflectionRouter.get("/daily/history", async (c) => {
 
     const daysParam = c.req.query("days") || "30";
     const days = parseInt(daysParam, 10);
+    const { limit, offset } = parsePagination(c);
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
-    const reflections = await db.dailyReflection.findMany({
-      where: {
-        profileId: profile.id,
-        date: { gte: startDate },
-      },
-      orderBy: { date: "desc" },
-    });
+    const whereClause = {
+      profileId: profile.id,
+      date: { gte: startDate },
+    };
+
+    const [reflections, total] = await Promise.all([
+      db.dailyReflection.findMany({
+        where: whereClause,
+        orderBy: { date: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      db.dailyReflection.count({ where: whereClause }),
+    ]);
 
     console.log(
       "✅ [Reflection] Retrieved daily reflections history"
     );
-    return c.json({ reflections, count: reflections.length });
+    return c.json({ reflections, count: reflections.length, total, limit, offset });
   } catch (error) {
     console.error(
       "❌ [Reflection] Error fetching daily reflections history:",
@@ -365,16 +381,25 @@ reflectionRouter.get("/weekly/history", async (c) => {
     startDate.setDate(startDate.getDate() - weeks * 7);
     startDate.setHours(0, 0, 0, 0);
 
-    const reflections = await db.weeklyReflection.findMany({
-      where: {
-        profileId: profile.id,
-        weekStartDate: { gte: startDate },
-      },
-      orderBy: { weekStartDate: "desc" },
-    });
+    const { limit, offset } = parsePagination(c);
+
+    const whereClause = {
+      profileId: profile.id,
+      weekStartDate: { gte: startDate },
+    };
+
+    const [reflections, total] = await Promise.all([
+      db.weeklyReflection.findMany({
+        where: whereClause,
+        orderBy: { weekStartDate: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      db.weeklyReflection.count({ where: whereClause }),
+    ]);
 
     console.log("✅ [Reflection] Retrieved weekly reflections history");
-    return c.json({ reflections, count: reflections.length });
+    return c.json({ reflections, count: reflections.length, total, limit, offset });
   } catch (error) {
     console.error("❌ [Reflection] Error fetching weekly reflections:", error);
     return c.json({ error: "Failed to fetch history" }, 500);
@@ -514,16 +539,22 @@ reflectionRouter.get("/monthly/history", async (c) => {
     const startYear = months > 12 ? now.getFullYear() - 1 : now.getFullYear();
     const startMonth = (now.getMonth() + 1 - months + 12) % 12 || 12;
 
-    const reflections = await db.monthlyReflection.findMany({
-      where: {
-        profileId: profile.id,
-      },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
-      take: months,
-    });
+    const { limit, offset } = parsePagination(c);
+
+    const whereClause = { profileId: profile.id };
+
+    const [reflections, total] = await Promise.all([
+      db.monthlyReflection.findMany({
+        where: whereClause,
+        orderBy: [{ year: "desc" }, { month: "desc" }],
+        take: limit,
+        skip: offset,
+      }),
+      db.monthlyReflection.count({ where: whereClause }),
+    ]);
 
     console.log("✅ [Reflection] Retrieved monthly reflections history");
-    return c.json({ reflections, count: reflections.length });
+    return c.json({ reflections, count: reflections.length, total, limit, offset });
   } catch (error) {
     console.error("❌ [Reflection] Error fetching monthly reflections:", error);
     return c.json({ error: "Failed to fetch history" }, 500);

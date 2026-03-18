@@ -23,29 +23,35 @@ interface RCSubscriberResponse {
 }
 
 interface CacheEntry {
-  tier: SubscriptionTier;
-  expiresAt: number;
+  tier: string;
+  cachedAt: number;
 }
 
 // ============================================================
-// SIMPLE IN-MEMORY CACHE (5-minute TTL)
+// SIMPLE IN-MEMORY CACHE (5-minute TTL, max 1000 entries)
 // ============================================================
 
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 1000;
 const tierCache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-function getCachedTier(userId: string): SubscriptionTier | null {
-  const entry = tierCache.get(userId);
+function getCachedTier(profileId: string): string | null {
+  const entry = tierCache.get(profileId);
   if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    tierCache.delete(userId);
+  if (Date.now() - entry.cachedAt > CACHE_TTL) {
+    tierCache.delete(profileId);
     return null;
   }
   return entry.tier;
 }
 
-function setCachedTier(userId: string, tier: SubscriptionTier): void {
-  tierCache.set(userId, { tier, expiresAt: Date.now() + CACHE_TTL_MS });
+function setCachedTier(profileId: string, tier: string): void {
+  if (tierCache.size >= MAX_CACHE_SIZE) {
+    // Evict oldest entry
+    const oldest = tierCache.keys().next().value;
+    if (oldest) tierCache.delete(oldest);
+  }
+  tierCache.set(profileId, { tier, cachedAt: Date.now() });
 }
 
 // ============================================================

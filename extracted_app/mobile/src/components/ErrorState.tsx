@@ -7,7 +7,7 @@ interface ErrorStateProps {
   onRetry?: () => void;
 }
 
-export function ErrorState({ message = 'Something went wrong', onRetry }: ErrorStateProps) {
+function ErrorStateComponent({ message = 'Something went wrong', onRetry }: ErrorStateProps) {
   return (
     <View className="flex-1 items-center justify-center px-8">
       <AlertTriangle size={48} color="#FF4444" />
@@ -27,3 +27,5 @@ export function ErrorState({ message = 'Something went wrong', onRetry }: ErrorS
     </View>
   );
 }
+
+export const ErrorState = React.memo(ErrorStateComponent);

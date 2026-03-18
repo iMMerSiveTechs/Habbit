@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { db } from "../db";
 import type { AppType } from "../index";
 import { z } from "zod";
+import { meetsMinimumTier, getTierLevel } from "../tierGuard";
 
 const createGeofenceSchema = z.object({
   name: z.string(),
@@ -39,6 +40,14 @@ const recordVisitSchema = z.object({
   productivity: z.number().optional(),
 });
 
+function parsePagination(c: any) {
+  const rawLimit = parseInt(c.req.query("limit") || "50", 10);
+  const rawOffset = parseInt(c.req.query("offset") || "0", 10);
+  const limit = Math.max(1, Math.min(100, isNaN(rawLimit) ? 50 : rawLimit));
+  const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
+  return { limit, offset };
+}
+
 const locationRouter = new Hono<AppType>()
   // Create geofence
   .post("/geofences", zValidator("json", createGeofenceSchema), async (c) => {
@@ -53,6 +62,22 @@ const locationRouter = new Hono<AppType>()
 
     if (!profile) {
       return c.json({ error: "Profile not found" }, 404);
+    }
+
+    // Tier check: require at least "core" to create geofences
+    const userTier = profile.subscriptionTier || "free";
+    if (!meetsMinimumTier(userTier, "core")) {
+      return c.json({ error: "Upgrade to Core to create geofences" }, 403);
+    }
+
+    // Geofence count limit: core=5, pro=20, elite=unlimited
+    const tierLevel = getTierLevel(userTier);
+    const geofenceLimit = tierLevel >= 3 ? Infinity : tierLevel >= 2 ? 20 : 5;
+    const currentCount = await db.locationGeofence.count({
+      where: { profileId: profile.id, isActive: true },
+    });
+    if (currentCount >= geofenceLimit) {
+      return c.json({ error: `Geofence limit reached (${geofenceLimit}). Upgrade for more.` }, 403);
     }
 
     const data = c.req.valid("json");
@@ -184,20 +209,27 @@ const locationRouter = new Hono<AppType>()
     });
 
     if (!profile) {
-      return c.json({ patterns: [] });
+      return c.json({ patterns: [], suggestions: [], total: 0, limit: 50, offset: 0 });
     }
 
-    // Get patterns sorted by confidence
-    const patterns = await db.locationPattern.findMany({
-      where: { profileId: profile.id },
-      orderBy: { confidence: "desc" },
-      take: 20,
-    });
+    const { limit, offset } = parsePagination(c);
+
+    const whereClause = { profileId: profile.id };
+
+    const [patterns, total] = await Promise.all([
+      db.locationPattern.findMany({
+        where: whereClause,
+        orderBy: { confidence: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      db.locationPattern.count({ where: whereClause }),
+    ]);
 
     // Filter to suggest only high-confidence unseen patterns
     const suggestions = patterns.filter((p) => p.confidence > 0.7 && !p.suggested);
 
-    return c.json({ patterns, suggestions });
+    return c.json({ patterns, suggestions, total, limit, offset });
   })
 
   // Get mood map
@@ -212,15 +244,24 @@ const locationRouter = new Hono<AppType>()
     });
 
     if (!profile) {
-      return c.json({ moodMap: [] });
+      return c.json({ moodMap: [], total: 0, limit: 50, offset: 0 });
     }
 
-    const moodMap = await db.locationMoodMap.findMany({
-      where: { profileId: profile.id },
-      orderBy: { avgMood: "desc" },
-    });
+    const { limit, offset } = parsePagination(c);
 
-    return c.json({ moodMap });
+    const whereClause = { profileId: profile.id };
+
+    const [moodMap, total] = await Promise.all([
+      db.locationMoodMap.findMany({
+        where: whereClause,
+        orderBy: { avgMood: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      db.locationMoodMap.count({ where: whereClause }),
+    ]);
+
+    return c.json({ moodMap, total, limit, offset });
   })
 
   // Delete geofence
@@ -328,12 +369,21 @@ const locationRouter = new Hono<AppType>()
       return c.json({ reminders: [] });
     }
 
-    const reminders = await db.locationReminder.findMany({
-      where: { profileId: profile.id, isActive: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const { limit, offset } = parsePagination(c);
 
-    return c.json({ reminders });
+    const whereClause = { profileId: profile.id, isActive: true };
+
+    const [reminders, total] = await Promise.all([
+      db.locationReminder.findMany({
+        where: whereClause,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      db.locationReminder.count({ where: whereClause }),
+    ]);
+
+    return c.json({ reminders, total, limit, offset });
   })
 
   .post("/reminders", zValidator("json", createReminderSchema), async (c) => {

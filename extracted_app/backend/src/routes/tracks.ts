@@ -14,289 +14,309 @@ const app = new Hono<AppType>();
 
 // POST /api/tracks/score - Submit a track rating
 app.post("/score", async (c) => {
-  const session = c.get("session");
-  if (!session) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
+  try {
+    const session = c.get("session");
+    if (!session) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
 
-  const profile = await db.profile.findUnique({
-    where: { userId: session.userId },
-  });
-
-  if (!profile) {
-    return c.json({ error: "Profile not found" }, 404);
-  }
-
-  const body = await c.req.json();
-  const data = submitTrackScoreRequestSchema.parse(body);
-
-  // Find or create track
-  let track = data.trackId
-    ? await db.track.findUnique({ where: { id: data.trackId } })
-    : data.spotifyId
-    ? await db.track.findUnique({ where: { spotifyId: data.spotifyId } })
-    : null;
-
-  if (!track) {
-    track = await db.track.create({
-      data: {
-        spotifyId: data.spotifyId,
-        title: data.title,
-        artist: data.artist,
-        album: data.album,
-        duration: data.duration,
-        imageUrl: data.imageUrl,
-        previewUrl: data.previewUrl,
-      },
+    const profile = await db.profile.findUnique({
+      where: { userId: session.userId },
     });
-  }
 
-  // Convert 0-1 scores to 0-100
-  const intScores = {
-    lyricism: Math.round(data.scores.lyricism * 100),
-    production: Math.round(data.scores.production * 100),
-    vocals: Math.round(data.scores.vocals * 100),
-    flow: Math.round(data.scores.flow * 100),
-    vibe: Math.round(data.scores.vibe * 100),
-  };
+    if (!profile) {
+      return c.json({ error: "Profile not found" }, 404);
+    }
 
-  // Create or update score
-  const score = await db.trackScore.upsert({
-    where: {
-      profileId_trackId: {
+    const body = await c.req.json();
+    const data = submitTrackScoreRequestSchema.parse(body);
+
+    // Find or create track
+    let track = data.trackId
+      ? await db.track.findUnique({ where: { id: data.trackId } })
+      : data.spotifyId
+      ? await db.track.findUnique({ where: { spotifyId: data.spotifyId } })
+      : null;
+
+    if (!track) {
+      track = await db.track.create({
+        data: {
+          spotifyId: data.spotifyId,
+          title: data.title,
+          artist: data.artist,
+          album: data.album,
+          duration: data.duration,
+          imageUrl: data.imageUrl,
+          previewUrl: data.previewUrl,
+        },
+      });
+    }
+
+    // Convert 0-1 scores to 0-100
+    const intScores = {
+      lyricism: Math.round(data.scores.lyricism * 100),
+      production: Math.round(data.scores.production * 100),
+      vocals: Math.round(data.scores.vocals * 100),
+      flow: Math.round(data.scores.flow * 100),
+      vibe: Math.round(data.scores.vibe * 100),
+    };
+
+    // Create or update score
+    const score = await db.trackScore.upsert({
+      where: {
+        profileId_trackId: {
+          profileId: profile.id,
+          trackId: track.id,
+        },
+      },
+      create: {
         profileId: profile.id,
         trackId: track.id,
+        ...intScores,
+        comment: data.comment,
+        isSpoiler: data.isSpoiler,
       },
-    },
-    create: {
-      profileId: profile.id,
-      trackId: track.id,
-      ...intScores,
-      comment: data.comment,
-      isSpoiler: data.isSpoiler,
-    },
-    update: {
-      ...intScores,
-      comment: data.comment,
-      isSpoiler: data.isSpoiler,
-    },
-  });
+      update: {
+        ...intScores,
+        comment: data.comment,
+        isSpoiler: data.isSpoiler,
+      },
+    });
 
-  // Recalculate aggregate
-  const allScores = await db.trackScore.findMany({
-    where: { trackId: track.id },
-  });
+    // Recalculate aggregate
+    const allScores = await db.trackScore.findMany({
+      where: { trackId: track.id },
+    });
 
-  const aggregate = await db.trackScoreAggregate.upsert({
-    where: { trackId: track.id },
-    create: {
-      trackId: track.id,
-      avgLyricism: allScores.reduce((sum, s) => sum + s.lyricism, 0) / allScores.length,
-      avgProduction: allScores.reduce((sum, s) => sum + s.production, 0) / allScores.length,
-      avgVocals: allScores.reduce((sum, s) => sum + s.vocals, 0) / allScores.length,
-      avgFlow: allScores.reduce((sum, s) => sum + s.flow, 0) / allScores.length,
-      avgVibe: allScores.reduce((sum, s) => sum + s.vibe, 0) / allScores.length,
-      totalReviews: allScores.length,
-    },
-    update: {
-      avgLyricism: allScores.reduce((sum, s) => sum + s.lyricism, 0) / allScores.length,
-      avgProduction: allScores.reduce((sum, s) => sum + s.production, 0) / allScores.length,
-      avgVocals: allScores.reduce((sum, s) => sum + s.vocals, 0) / allScores.length,
-      avgFlow: allScores.reduce((sum, s) => sum + s.flow, 0) / allScores.length,
-      avgVibe: allScores.reduce((sum, s) => sum + s.vibe, 0) / allScores.length,
-      totalReviews: allScores.length,
-    },
-  });
+    const aggregate = await db.trackScoreAggregate.upsert({
+      where: { trackId: track.id },
+      create: {
+        trackId: track.id,
+        avgLyricism: allScores.reduce((sum, s) => sum + s.lyricism, 0) / allScores.length,
+        avgProduction: allScores.reduce((sum, s) => sum + s.production, 0) / allScores.length,
+        avgVocals: allScores.reduce((sum, s) => sum + s.vocals, 0) / allScores.length,
+        avgFlow: allScores.reduce((sum, s) => sum + s.flow, 0) / allScores.length,
+        avgVibe: allScores.reduce((sum, s) => sum + s.vibe, 0) / allScores.length,
+        totalReviews: allScores.length,
+      },
+      update: {
+        avgLyricism: allScores.reduce((sum, s) => sum + s.lyricism, 0) / allScores.length,
+        avgProduction: allScores.reduce((sum, s) => sum + s.production, 0) / allScores.length,
+        avgVocals: allScores.reduce((sum, s) => sum + s.vocals, 0) / allScores.length,
+        avgFlow: allScores.reduce((sum, s) => sum + s.flow, 0) / allScores.length,
+        avgVibe: allScores.reduce((sum, s) => sum + s.vibe, 0) / allScores.length,
+        totalReviews: allScores.length,
+      },
+    });
 
-  // Update user preferences based on their rating
-  await updateUserTasteFromReview(profile.id, intScores, aggregate);
+    // Update user preferences based on their rating
+    await updateUserTasteFromReview(profile.id, intScores, aggregate);
 
-  return c.json({
-    success: true,
-    score: {
-      ...score,
-      createdAt: score.createdAt.toISOString(),
-      updatedAt: score.updatedAt.toISOString(),
-    },
-    aggregate: {
-      ...aggregate,
-      updatedAt: aggregate.updatedAt.toISOString(),
-    },
-  });
+    return c.json({
+      success: true,
+      score: {
+        ...score,
+        createdAt: score.createdAt.toISOString(),
+        updatedAt: score.updatedAt.toISOString(),
+      },
+      aggregate: {
+        ...aggregate,
+        updatedAt: aggregate.updatedAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error(`[Tracks] Error:`, error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
 });
 
 // GET /api/tracks/:trackId - Get track details with scores
 app.get("/:trackId", async (c) => {
-  const session = c.get("session");
-  const trackId = c.req.param("trackId");
+  try {
+    const session = c.get("session");
+    const trackId = c.req.param("trackId");
 
-  const track = await db.track.findUnique({
-    where: { id: trackId },
-  });
-
-  if (!track) {
-    return c.json({ error: "Track not found" }, 404);
-  }
-
-  const aggregate = await db.trackScoreAggregate.findUnique({
-    where: { trackId: track.id },
-  });
-
-  let userScore = null;
-  if (session) {
-    const profile = await db.profile.findUnique({
-      where: { userId: session.userId },
+    const track = await db.track.findUnique({
+      where: { id: trackId },
     });
 
-    if (profile) {
-      userScore = await db.trackScore.findUnique({
-        where: {
-          profileId_trackId: {
-            profileId: profile.id,
-            trackId: track.id,
-          },
-        },
-      });
+    if (!track) {
+      return c.json({ error: "Track not found" }, 404);
     }
-  }
 
-  return c.json({
-    track: {
-      ...track,
-      createdAt: track.createdAt.toISOString(),
-      updatedAt: track.updatedAt.toISOString(),
-    },
-    aggregate: aggregate
-      ? {
-          ...aggregate,
-          updatedAt: aggregate.updatedAt.toISOString(),
-        }
-      : null,
-    userScore: userScore
-      ? {
-          ...userScore,
-          createdAt: userScore.createdAt.toISOString(),
-          updatedAt: userScore.updatedAt.toISOString(),
-        }
-      : null,
-  });
+    const aggregate = await db.trackScoreAggregate.findUnique({
+      where: { trackId: track.id },
+    });
+
+    let userScore = null;
+    if (session) {
+      const profile = await db.profile.findUnique({
+        where: { userId: session.userId },
+      });
+
+      if (profile) {
+        userScore = await db.trackScore.findUnique({
+          where: {
+            profileId_trackId: {
+              profileId: profile.id,
+              trackId: track.id,
+            },
+          },
+        });
+      }
+    }
+
+    return c.json({
+      track: {
+        ...track,
+        createdAt: track.createdAt.toISOString(),
+        updatedAt: track.updatedAt.toISOString(),
+      },
+      aggregate: aggregate
+        ? {
+            ...aggregate,
+            updatedAt: aggregate.updatedAt.toISOString(),
+          }
+        : null,
+      userScore: userScore
+        ? {
+            ...userScore,
+            createdAt: userScore.createdAt.toISOString(),
+            updatedAt: userScore.updatedAt.toISOString(),
+          }
+        : null,
+    });
+  } catch (error) {
+    console.error(`[Tracks] Error:`, error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
 });
 
 // GET /api/tracks/:trackId/scores - Get all scores for a track
 app.get("/:trackId/scores", async (c) => {
-  const session = c.get("session");
-  const trackId = c.req.param("trackId");
+  try {
+    const session = c.get("session");
+    const trackId = c.req.param("trackId");
 
-  const scores = await db.trackScore.findMany({
-    where: { trackId },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const aggregate = await db.trackScoreAggregate.findUnique({
-    where: { trackId },
-  });
-
-  let userScore = null;
-  if (session) {
-    const profile = await db.profile.findUnique({
-      where: { userId: session.userId },
+    const scores = await db.trackScore.findMany({
+      where: { trackId },
+      orderBy: { createdAt: "desc" },
     });
 
-    if (profile) {
-      userScore = await db.trackScore.findUnique({
-        where: {
-          profileId_trackId: {
-            profileId: profile.id,
-            trackId,
-          },
-        },
-      });
-    }
-  }
+    const aggregate = await db.trackScoreAggregate.findUnique({
+      where: { trackId },
+    });
 
-  return c.json({
-    scores: scores.map((s) => ({
-      ...s,
-      createdAt: s.createdAt.toISOString(),
-      updatedAt: s.updatedAt.toISOString(),
-    })),
-    aggregate: aggregate
-      ? {
-          ...aggregate,
-          updatedAt: aggregate.updatedAt.toISOString(),
-        }
-      : null,
-    userScore: userScore
-      ? {
-          ...userScore,
-          createdAt: userScore.createdAt.toISOString(),
-          updatedAt: userScore.updatedAt.toISOString(),
-        }
-      : null,
-  });
+    let userScore = null;
+    if (session) {
+      const profile = await db.profile.findUnique({
+        where: { userId: session.userId },
+      });
+
+      if (profile) {
+        userScore = await db.trackScore.findUnique({
+          where: {
+            profileId_trackId: {
+              profileId: profile.id,
+              trackId,
+            },
+          },
+        });
+      }
+    }
+
+    return c.json({
+      scores: scores.map((s) => ({
+        ...s,
+        createdAt: s.createdAt.toISOString(),
+        updatedAt: s.updatedAt.toISOString(),
+      })),
+      aggregate: aggregate
+        ? {
+            ...aggregate,
+            updatedAt: aggregate.updatedAt.toISOString(),
+          }
+        : null,
+      userScore: userScore
+        ? {
+            ...userScore,
+            createdAt: userScore.createdAt.toISOString(),
+            updatedAt: userScore.updatedAt.toISOString(),
+          }
+        : null,
+    });
+  } catch (error) {
+    console.error(`[Tracks] Error:`, error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
 });
 
 // POST /api/tracks/:trackId/play - Record a play
 app.post("/:trackId/play", async (c) => {
-  const session = c.get("session");
-  if (!session) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
+  try {
+    const session = c.get("session");
+    if (!session) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
 
-  const profile = await db.profile.findUnique({
-    where: { userId: session.userId },
-  });
+    const profile = await db.profile.findUnique({
+      where: { userId: session.userId },
+    });
 
-  if (!profile) {
-    return c.json({ error: "Profile not found" }, 404);
-  }
+    if (!profile) {
+      return c.json({ error: "Profile not found" }, 404);
+    }
 
-  const trackId = c.req.param("trackId");
+    const trackId = c.req.param("trackId");
 
-  // Upsert play history
-  const playHistory = await db.playHistory.upsert({
-    where: {
-      profileId_trackId: {
-        profileId: profile.id,
-        trackId,
-      },
-    },
-    create: {
-      profileId: profile.id,
-      trackId,
-      playCount: 1,
-      playedAt: new Date(),
-    },
-    update: {
-      playCount: {
-        increment: 1,
-      },
-      playedAt: new Date(),
-    },
-  });
-
-  // Check if we should prompt for rating (after 3 plays)
-  const shouldPromptRating = playHistory.playCount >= 3 && !playHistory.ratingPrompted;
-
-  if (shouldPromptRating) {
-    await db.playHistory.update({
+    // Upsert play history
+    const playHistory = await db.playHistory.upsert({
       where: {
         profileId_trackId: {
           profileId: profile.id,
           trackId,
         },
       },
-      data: {
-        ratingPrompted: true,
+      create: {
+        profileId: profile.id,
+        trackId,
+        playCount: 1,
+        playedAt: new Date(),
+      },
+      update: {
+        playCount: {
+          increment: 1,
+        },
+        playedAt: new Date(),
       },
     });
-  }
 
-  return c.json({
-    success: true,
-    playCount: playHistory.playCount,
-    shouldPromptRating,
-  });
+    // Check if we should prompt for rating (after 3 plays)
+    const shouldPromptRating = playHistory.playCount >= 3 && !playHistory.ratingPrompted;
+
+    if (shouldPromptRating) {
+      await db.playHistory.update({
+        where: {
+          profileId_trackId: {
+            profileId: profile.id,
+            trackId,
+          },
+        },
+        data: {
+          ratingPrompted: true,
+        },
+      });
+    }
+
+    return c.json({
+      success: true,
+      playCount: playHistory.playCount,
+      shouldPromptRating,
+    });
+  } catch (error) {
+    console.error(`[Tracks] Error:`, error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
 });
 
 // Helper function to update user taste profile based on their ratings

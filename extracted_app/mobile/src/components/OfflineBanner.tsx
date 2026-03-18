@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { WifiOff } from 'lucide-react-native';
 
-export function OfflineBanner() {
+function OfflineBannerComponent() {
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
@@ -24,3 +24,5 @@ export function OfflineBanner() {
     </View>
   );
 }
+
+export const OfflineBanner = React.memo(OfflineBannerComponent);

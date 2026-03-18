@@ -155,6 +155,7 @@ model HabitReminder {
   updatedAt         DateTime @updatedAt
   habit             Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
 
+  @@index([habitId])
   @@map("habit_reminder")
 }
 
@@ -246,6 +247,7 @@ model BiometricData {
   source       String   @default("manual")
   profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
+  @@index([profileId, timestamp])
   @@map("biometric_data")
 }
 
@@ -360,6 +362,7 @@ model LocationPattern {
   lastSeen      DateTime @default(now())
   createdAt     DateTime @default(now())
 
+  @@index([profileId])
   @@map("location_pattern")
 }
 
@@ -402,6 +405,7 @@ model Todo {
 
   @@index([profileId, completed])
   @@index([profileId, archived])
+  @@index([profileId, dueDate])
   @@map("todo")
 }
 
@@ -455,6 +459,7 @@ model TodoReminder {
   createdAt      DateTime @default(now())
   todo           Todo     @relation(fields: [todoId], references: [id], onDelete: Cascade)
 
+  @@index([todoId])
   @@map("todo_reminder")
 }
 

@@ -15,6 +15,14 @@ import {
 } from "../../../shared/contracts";
 import { getLimits } from "../tierGuard";
 
+function parsePagination(c: any) {
+  const rawLimit = parseInt(c.req.query("limit") || "50", 10);
+  const rawOffset = parseInt(c.req.query("offset") || "0", 10);
+  const limit = Math.max(1, Math.min(100, isNaN(rawLimit) ? 50 : rawLimit));
+  const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
+  return { limit, offset };
+}
+
 const todos = new Hono<AppType>();
 
 // GET /api/todos - Get all todos for authenticated user
@@ -33,21 +41,30 @@ todos.get("/", async (c) => {
     return c.json({ error: "Profile not found" }, 404);
   }
 
-  const userTodos = await db.todo.findMany({
-    where: {
-      profileId: profile.id,
-      archived: false, // Only show non-archived todos by default
-    },
-    include: {
-      items: {
-        orderBy: { order: "asc" },
+  const { limit, offset } = parsePagination(c);
+
+  const whereClause = {
+    profileId: profile.id,
+    archived: false, // Only show non-archived todos by default
+  };
+
+  const [userTodos, total] = await Promise.all([
+    db.todo.findMany({
+      where: whereClause,
+      include: {
+        items: {
+          orderBy: { order: "asc" },
+        },
+        reminders: {
+          orderBy: { createdAt: "asc" },
+        },
       },
-      reminders: {
-        orderBy: { createdAt: "asc" },
-      },
-    },
-    orderBy: [{ completed: "asc" }, { order: "asc" }, { createdAt: "desc" }],
-  });
+      orderBy: [{ completed: "asc" }, { order: "asc" }, { createdAt: "desc" }],
+      take: limit,
+      skip: offset,
+    }),
+    db.todo.count({ where: whereClause }),
+  ]);
 
   return c.json({
     todos: userTodos.map((todo) => ({
@@ -66,6 +83,9 @@ todos.get("/", async (c) => {
         createdAt: r.createdAt.toISOString(),
       })),
     })),
+    total,
+    limit,
+    offset,
   });
 });
 

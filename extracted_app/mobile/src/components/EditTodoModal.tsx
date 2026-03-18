@@ -158,6 +158,8 @@ function DraggableItem({
           {item}
         </Text>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`Remove checklist item: ${item}`}
           onPress={() => onRemove(index)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
@@ -355,7 +357,11 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
         <SafeAreaView edges={["top"]} className="flex-1">
           <View className="px-6 py-4 border-b border-white/5 flex-row items-center justify-between">
             <Text className="text-white text-xl font-bold">Edit Todo</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Close edit todo"
+              onPress={onClose}
+            >
               <X size={24} color="#ffffff" />
             </TouchableOpacity>
           </View>
@@ -368,6 +374,8 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
             <View className="mb-4">
               <Text className="text-white/60 text-sm mb-2 font-medium">Title *</Text>
               <TextInput
+                accessibilityLabel="Todo title"
+                accessibilityHint="Enter the title for this todo"
                 value={title}
                 onChangeText={setTitle}
                 placeholder="What needs to be done?"
@@ -381,6 +389,8 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
             <View className="mb-4">
               <Text className="text-white/60 text-sm mb-2 font-medium">Description</Text>
               <TextInput
+                accessibilityLabel="Todo description"
+                accessibilityHint="Add optional details for this todo"
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Add details..."
@@ -400,6 +410,8 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
                 {(["low", "medium", "high"] as const).map((p) => (
                   <TouchableOpacity
                     key={p}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${p} priority${priority === p ? ", selected" : ""}`}
                     onPress={() => setPriority(p)}
                     className="flex-1 py-3 rounded-2xl items-center"
                     style={{
@@ -430,6 +442,9 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
                   <Text className="text-white font-semibold ml-2">Set Due Date</Text>
                 </View>
                 <Switch
+                  accessibilityRole="switch"
+                  accessibilityLabel="Set due date"
+                  accessibilityState={{ checked: hasDueDate }}
                   value={hasDueDate}
                   onValueChange={setHasDueDate}
                   trackColor={{ false: "#767577", true: "#00D4FF" }}
@@ -455,6 +470,9 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
                   <Text className="text-white font-semibold ml-2">Make Recurring</Text>
                 </View>
                 <Switch
+                  accessibilityRole="switch"
+                  accessibilityLabel="Make recurring"
+                  accessibilityState={{ checked: recurringEnabled }}
                   value={recurringEnabled}
                   onValueChange={setRecurringEnabled}
                   trackColor={{ false: "#767577", true: "#00D4FF" }}
@@ -467,6 +485,8 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
                     {(["daily", "weekdays", "weekends", "weekly"] as const).map((type) => (
                       <TouchableOpacity
                         key={type}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${type} recurrence${recurringType === type ? ", selected" : ""}`}
                         onPress={() => setRecurringType(type)}
                         className="px-4 py-2 rounded-2xl"
                         style={{
@@ -486,6 +506,8 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
                       {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
                         <TouchableOpacity
                           key={i}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${day}${recurringDays.includes(i) ? ", selected" : ""}`}
                           onPress={() => {
                             if (recurringDays.includes(i)) {
                               setRecurringDays(recurringDays.filter((d) => d !== i));
@@ -554,6 +576,8 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
               {/* Add new item */}
               <View className="flex-row items-center gap-2 mt-1">
                 <TextInput
+                  accessibilityLabel="New checklist item"
+                  accessibilityHint="Type a checklist item and press done to add it"
                   value={newItem}
                   onChangeText={setNewItem}
                   placeholder="Add checklist item..."
@@ -563,7 +587,7 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
                   onSubmitEditing={addChecklistItem}
                   returnKeyType="done"
                 />
-                <TouchableOpacity onPress={addChecklistItem} disabled={!newItem.trim()} style={{ opacity: newItem.trim() ? 1 : 0.5 }}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Add checklist item" onPress={addChecklistItem} disabled={!newItem.trim()} style={{ opacity: newItem.trim() ? 1 : 0.5 }}>
                   <LinearGradient
                     colors={["#00D4FF", "#8B5CF6"]}
                     start={{ x: 0, y: 0 }}
@@ -579,6 +603,10 @@ export function EditTodoModal({ visible, onClose, onUpdate, todo }: EditTodoModa
 
           <View className="px-6 py-4 border-t border-white/5">
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={isSubmitting ? "Saving changes" : "Save changes"}
+              accessibilityHint="Double tap to save your todo changes"
+              accessibilityState={{ disabled: !title.trim() || isSubmitting }}
               onPress={handleSubmit}
               disabled={!title.trim() || isSubmitting}
               className="py-4 rounded-2xl items-center"

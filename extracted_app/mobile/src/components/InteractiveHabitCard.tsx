@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { View, Text, Pressable, Animated, PanResponder, Alert } from "react-native";
 import { GlassCard } from "./GlassCard";
 import { Circle, CheckCircle2, Pencil, X, Check, Flame, TrendingUp } from "lucide-react-native";
@@ -60,7 +60,7 @@ function logQualityColor(quality?: string | null): string | null {
   return null;
 }
 
-export function InteractiveHabitCard({
+function InteractiveHabitCardComponent({
   habit,
   onComplete,
   onEdit,
@@ -457,3 +457,5 @@ export function InteractiveHabitCard({
     </View>
   );
 }
+
+export const InteractiveHabitCard = React.memo(InteractiveHabitCardComponent);

@@ -1,10 +1,19 @@
 {
   "name": "habbit",
   "version": "1.1.0",
-  "main": "App.js",
-  "dependencies": {
-    "@react-native-async-storage/async-storage": "^1.15.0",
-    "react": "^17.0.2",
-    "react-native": "^0.66.0"
+  "private": true,
+  "description": "Habbit - Habit tracking mobile app built with Expo SDK 53, React 19, and React Native 0.79",
+  "scripts": {
+    "start": "cd extracted_app/mobile && expo start",
+    "android": "cd extracted_app/mobile && expo run:android",
+    "ios": "cd extracted_app/mobile && expo run:ios",
+    "lint": "cd extracted_app/mobile && expo lint",
+    "typecheck": "cd extracted_app/mobile && tsc --noEmit",
+    "format": "cd extracted_app/mobile && bunx prettier --write .",
+    "backend:start": "cd extracted_app/mobile/backend && bun run dev",
+    "test": "cd extracted_app/mobile && bunx vitest run"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

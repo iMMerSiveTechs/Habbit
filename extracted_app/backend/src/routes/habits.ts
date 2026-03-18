@@ -66,6 +66,14 @@ const CATEGORY_METADATA: { [key: string]: { label: string; emoji: string } } = {
   general: { label: "General", emoji: "📌" },
 };
 
+function parsePagination(c: any) {
+  const rawLimit = parseInt(c.req.query("limit") || "50", 10);
+  const rawOffset = parseInt(c.req.query("offset") || "0", 10);
+  const limit = Math.max(1, Math.min(100, isNaN(rawLimit) ? 50 : rawLimit));
+  const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
+  return { limit, offset };
+}
+
 const habitsRouter = new Hono<AppType>()
   // Get all habits for current user
   .get("/", async (c) => {
@@ -115,34 +123,45 @@ const habitsRouter = new Hono<AppType>()
             streak: 0,
           },
         ],
+        total: 3,
+        limit: 50,
+        offset: 0,
       });
     }
 
     const profile = await db.profile.findUnique({
       where: { userId: user.id },
-      include: {
-        habits: {
-          where: { archived: false },
-          orderBy: { order: "asc" },
-          include: {
-            events: {
-              where: {
-                completedAt: {
-                  gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
-                },
-              },
-              orderBy: { completedAt: "desc" },
-            },
-          },
-        },
-      },
     });
 
     if (!profile) {
-      return c.json({ habits: [] });
+      return c.json({ habits: [], total: 0, limit: 50, offset: 0 });
     }
 
-    const habits = profile.habits.map((habit) => {
+    const { limit, offset } = parsePagination(c);
+
+    const [habitRecords, total] = await Promise.all([
+      db.habit.findMany({
+        where: { profileId: profile.id, archived: false },
+        orderBy: { order: "asc" },
+        take: limit,
+        skip: offset,
+        include: {
+          events: {
+            where: {
+              completedAt: {
+                gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+              },
+            },
+            orderBy: { completedAt: "desc" },
+          },
+        },
+      }),
+      db.habit.count({
+        where: { profileId: profile.id, archived: false },
+      }),
+    ]);
+
+    const habits = habitRecords.map((habit) => {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayEvents = habit.events.filter(e => e.completedAt >= todayStart);
@@ -177,7 +196,7 @@ const habitsRouter = new Hono<AppType>()
       };
     });
 
-    return c.json({ habits });
+    return c.json({ habits, total, limit, offset });
   })
 
   // Get single habit by ID
@@ -807,6 +826,14 @@ const habitsRouter = new Hono<AppType>()
 
     if (!habit) {
       return c.json({ error: "Habit not found" }, 404);
+    }
+
+    const reminder = await db.habitReminder.findFirst({
+      where: { id: reminderId, habitId: habit.id },
+    });
+
+    if (!reminder) {
+      return c.json({ error: "Reminder not found" }, 404);
     }
 
     await db.habitReminder.delete({

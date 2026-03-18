@@ -1,11 +1,11 @@
 /**
  * Image Task Extraction Service
  *
- * Uses AI (OpenAI Vision API) to extract tasks from images
+ * Uses the backend AI proxy to extract tasks from images
  * Perfect for converting handwritten lists, whiteboard photos, or screenshots into todos
  */
 
-import OpenAI from "openai";
+import { api } from "@/lib/api";
 
 export interface ExtractedTask {
   title: string;
@@ -21,108 +21,63 @@ export interface TaskExtractionResult {
 }
 
 export class ImageTaskExtractionService {
-  private static openai: OpenAI | null = null;
-
   /**
-   * Initialize the service with OpenAI API key
-   * Users should add their API key via ENV tab in Vibecode app
+   * The service is always configured since it uses the backend proxy
    */
-  static initialize(apiKey: string) {
-    this.openai = new OpenAI({
-      apiKey,
-    });
+  static initialize(_apiKey?: string) {
+    // No-op: API key is now managed server-side
   }
 
   /**
    * Check if the service is configured
+   * Always returns true since we use the backend proxy
    */
   static isConfigured(): boolean {
-    return this.openai !== null;
+    return true;
   }
 
   /**
-   * Extract tasks from an image
+   * Extract tasks from an image via the backend proxy
    */
   static async extractTasksFromImage(
     imageUri: string,
-    context?: string
+    _context?: string
   ): Promise<TaskExtractionResult> {
-    if (!this.isConfigured()) {
-      throw new Error(
-        "Image Task Extraction Service not configured. Please add your OpenAI API key in Settings."
-      );
-    }
-
     try {
       // Convert image to base64
       const base64Image = await this.imageUriToBase64(imageUri);
 
-      // Create the prompt
-      const prompt = `You are a task extraction AI. Analyze this image and extract all tasks, to-dos, or action items you can find.
+      // Determine MIME type from URI
+      const mimeType = this.getMimeType(imageUri);
 
-${context ? `Context: ${context}\n\n` : ""}
-Look for:
-- Handwritten lists
-- Typed lists
-- Whiteboard notes
-- Screenshots of task lists
-- Any text that represents things to be done
-
-For each task, provide:
-1. Title (clear, concise description)
-2. Description (optional details if available)
-3. Priority (low, medium, or high based on markers like "!", "urgent", or context)
-4. Due date (if mentioned in the image)
-
-Return a JSON object with this structure:
-{
-  "tasks": [
-    {
-      "title": "Task title",
-      "description": "Optional description",
-      "priority": "low" | "medium" | "high",
-      "dueDate": "YYYY-MM-DD or null"
-    }
-  ],
-  "rawText": "All text found in the image",
-  "confidence": 0.0-1.0 (how confident you are in the extraction)
-}
-
-If the image contains no tasks, return an empty tasks array.`;
-
-      const response = await this.openai!.chat.completions.create({
-        model: "gpt-4o", // GPT-4 with vision
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:image/jpeg;base64,${base64Image}`,
-                },
-              },
-            ],
-          },
-        ],
-        max_tokens: 1000,
-        temperature: 0.3, // Lower temperature for more consistent extraction
+      // Call the backend proxy endpoint
+      const response = await api.post("/api/ai/extract-tasks", {
+        imageBase64: base64Image,
+        mimeType,
       });
 
-      const content = response.choices[0].message.content;
-      if (!content) {
-        throw new Error("No response from AI");
-      }
+      const data = response.data as { tasks: ExtractedTask[] };
+      const tasks = data.tasks || [];
 
-      // Parse the JSON response
-      const result: TaskExtractionResult = JSON.parse(content);
-
-      return result;
+      return {
+        tasks,
+        confidence: tasks.length > 0 ? 0.8 : 0.0,
+      };
     } catch (error) {
       console.error("Failed to extract tasks from image:", error);
       throw error;
     }
+  }
+
+  /**
+   * Determine MIME type from image URI
+   */
+  private static getMimeType(uri: string): string {
+    const lower = uri.toLowerCase();
+    if (lower.endsWith(".png")) return "image/png";
+    if (lower.endsWith(".gif")) return "image/gif";
+    if (lower.endsWith(".webp")) return "image/webp";
+    return "image/jpeg";
   }
 
   /**
@@ -193,53 +148,18 @@ If the image contains no tasks, return an empty tasks array.`;
     estimatedTaskCount: number;
     preview: string;
   }> {
-    if (!this.isConfigured()) {
-      throw new Error("Service not configured");
-    }
-
+    // Use the extract endpoint and infer analysis from results
     try {
-      const base64Image = await this.imageUriToBase64(imageUri);
-
-      const response = await this.openai!.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Analyze this image briefly. Does it contain text? Does it look like a list or tasks? How many items approximately? Give a short preview of what you see.",
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:image/jpeg;base64,${base64Image}`,
-                },
-              },
-            ],
-          },
-        ],
-        max_tokens: 200,
-      });
-
-      const content = response.choices[0].message.content || "";
-
-      // Parse the response (simple heuristics)
-      const hasText = content.toLowerCase().includes("text") || content.toLowerCase().includes("list");
-      const hasListStructure =
-        content.toLowerCase().includes("list") ||
-        content.toLowerCase().includes("items") ||
-        content.toLowerCase().includes("tasks");
-
-      // Estimate task count from content
-      const numbers = content.match(/\d+/g);
-      const estimatedTaskCount = numbers ? parseInt(numbers[0]) : 0;
+      const result = await this.extractTasksFromImage(imageUri);
+      const taskCount = result.tasks.length;
 
       return {
-        hasText,
-        hasListStructure,
-        estimatedTaskCount,
-        preview: content,
+        hasText: taskCount > 0,
+        hasListStructure: taskCount > 1,
+        estimatedTaskCount: taskCount,
+        preview: taskCount > 0
+          ? `Found ${taskCount} task(s): ${result.tasks.map(t => t.title).join(", ")}`
+          : "No tasks detected in the image.",
       };
     } catch (error) {
       console.error("Failed to analyze image:", error);

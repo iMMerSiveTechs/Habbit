@@ -99,6 +99,69 @@ const aiRouter = new Hono<AppType>()
     });
   })
 
+  // POST /api/ai/extract-tasks - Extract tasks from image (proxied to OpenAI)
+  .post("/extract-tasks", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+    try {
+      const { imageBase64, mimeType } = await c.req.json();
+
+      if (!imageBase64) {
+        return c.json({ error: "Image data required" }, 400);
+      }
+
+      const openaiKey = process.env.OPENAI_API_KEY || process.env.EXPO_PUBLIC_OPENAI_API_KEY;
+      if (!openaiKey) {
+        return c.json({ error: "OpenAI not configured" }, 503);
+      }
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openaiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Extract actionable tasks from this image. Return a JSON array of objects with 'title' (string) and 'priority' ('low'|'medium'|'high') fields." },
+                { type: "image_url", image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${imageBase64}` } }
+              ]
+            }
+          ],
+          max_tokens: 1000,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        console.error("[AI] OpenAI error:", err);
+        return c.json({ error: "Failed to extract tasks" }, 502);
+      }
+
+      const result = await response.json() as any;
+      const content = result.choices?.[0]?.message?.content || "[]";
+
+      // Try to parse JSON from the response
+      let tasks;
+      try {
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        tasks = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+      } catch {
+        tasks = [];
+      }
+
+      return c.json({ tasks });
+    } catch (error) {
+      console.error("[AI] Extract tasks error:", error);
+      return c.json({ error: "Internal server error" }, 500);
+    }
+  })
+
   // Generate AI coaching message
   .post("/coaching", zValidator("json", querySchema), async (c) => {
     const user = c.get("user");

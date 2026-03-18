@@ -9,7 +9,7 @@ interface EmptyStateProps {
   action?: React.ReactNode;
 }
 
-export function EmptyState({ icon, title, subtitle, action }: EmptyStateProps) {
+function EmptyStateComponent({ icon, title, subtitle, action }: EmptyStateProps) {
   return (
     <View className="flex-1 items-center justify-center px-8 py-12">
       {icon ?? <Inbox size={48} color="#555" />}
@@ -21,3 +21,5 @@ export function EmptyState({ icon, title, subtitle, action }: EmptyStateProps) {
     </View>
   );
 }
+
+export const EmptyState = React.memo(EmptyStateComponent);

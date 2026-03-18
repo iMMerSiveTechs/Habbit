@@ -18,141 +18,182 @@ const biometricSchema = z.object({
   source: z.string().max(50).optional(),
 });
 
+function parsePagination(c: any) {
+  const rawLimit = parseInt(c.req.query("limit") || "50", 10);
+  const rawOffset = parseInt(c.req.query("offset") || "0", 10);
+  const limit = Math.max(1, Math.min(100, isNaN(rawLimit) ? 50 : rawLimit));
+  const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
+  return { limit, offset };
+}
+
 const biometricRouter = new Hono<AppType>()
   // Submit biometric data
   .post("/", zValidator("json", biometricSchema), async (c) => {
-    const user = c.get("user");
-    if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
+    try {
+      const user = c.get("user");
+      if (!user) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      const profile = await db.profile.findUnique({
+        where: { userId: user.id },
+      });
+
+      if (!profile) {
+        return c.json({ error: "Profile not found" }, 404);
+      }
+
+      const data = c.req.valid("json");
+
+      const biometric = await db.biometricData.create({
+        data: {
+          profileId: profile.id,
+          hrv: data.hrv || null,
+          restingHR: data.restingHR || null,
+          sleepScore: data.sleepScore || null,
+          sleepHours: data.sleepHours || null,
+          deepSleep: data.deepSleep || null,
+          remSleep: data.remSleep || null,
+          stressLevel: data.stressLevel || null,
+          energyLevel: data.energyLevel || null,
+          activityMins: data.activityMins || null,
+          steps: data.steps || null,
+          source: data.source || "manual",
+        },
+      });
+
+      return c.json({ biometric });
+    } catch (error) {
+      console.error(`[Biometric] Error:`, error);
+      return c.json({ error: "Internal server error" }, 500);
     }
-
-    const profile = await db.profile.findUnique({
-      where: { userId: user.id },
-    });
-
-    if (!profile) {
-      return c.json({ error: "Profile not found" }, 404);
-    }
-
-    const data = c.req.valid("json");
-
-    const biometric = await db.biometricData.create({
-      data: {
-        profileId: profile.id,
-        hrv: data.hrv || null,
-        restingHR: data.restingHR || null,
-        sleepScore: data.sleepScore || null,
-        sleepHours: data.sleepHours || null,
-        deepSleep: data.deepSleep || null,
-        remSleep: data.remSleep || null,
-        stressLevel: data.stressLevel || null,
-        energyLevel: data.energyLevel || null,
-        activityMins: data.activityMins || null,
-        steps: data.steps || null,
-        source: data.source || "manual",
-      },
-    });
-
-    return c.json({ biometric });
   })
 
   // Get latest biometric data
   .get("/latest", async (c) => {
-    const user = c.get("user");
-    if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
+    try {
+      const user = c.get("user");
+      if (!user) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      const profile = await db.profile.findUnique({
+        where: { userId: user.id },
+      });
+
+      if (!profile) {
+        return c.json({ biometric: null });
+      }
+
+      const biometric = await db.biometricData.findFirst({
+        where: { profileId: profile.id },
+        orderBy: { timestamp: "desc" },
+      });
+
+      return c.json({ biometric });
+    } catch (error) {
+      console.error(`[Biometric] Error:`, error);
+      return c.json({ error: "Internal server error" }, 500);
     }
-
-    const profile = await db.profile.findUnique({
-      where: { userId: user.id },
-    });
-
-    if (!profile) {
-      return c.json({ biometric: null });
-    }
-
-    const biometric = await db.biometricData.findFirst({
-      where: { profileId: profile.id },
-      orderBy: { timestamp: "desc" },
-    });
-
-    return c.json({ biometric });
   })
 
   // Get biometric trends
   .get("/trends", async (c) => {
-    const user = c.get("user");
-    if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
+    try {
+      const user = c.get("user");
+      if (!user) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
 
-    const days = parseInt(c.req.query("days") || "7");
+      const rawDays = parseInt(c.req.query("days") || "7", 10);
+      const days = Math.max(1, Math.min(365, isNaN(rawDays) ? 7 : rawDays));
 
-    const profile = await db.profile.findUnique({
-      where: { userId: user.id },
-    });
+      const profile = await db.profile.findUnique({
+        where: { userId: user.id },
+      });
 
-    if (!profile) {
-      return c.json({ trends: [] });
-    }
+      if (!profile) {
+        return c.json({ trends: [] });
+      }
 
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
 
-    const data = await db.biometricData.findMany({
-      where: {
+      const { limit, offset } = parsePagination(c);
+
+      const whereClause = {
         profileId: profile.id,
         timestamp: { gte: cutoff },
-      },
-      orderBy: { timestamp: "asc" },
-    });
+      };
 
-    // Calculate averages
-    const avgHRV = data.filter(d => d.hrv).reduce((sum, d) => sum + (d.hrv || 0), 0) / data.filter(d => d.hrv).length || 0;
-    const avgSleepScore = data.filter(d => d.sleepScore).reduce((sum, d) => sum + (d.sleepScore || 0), 0) / data.filter(d => d.sleepScore).length || 0;
-    const avgStress = data.filter(d => d.stressLevel).reduce((sum, d) => sum + (d.stressLevel || 0), 0) / data.filter(d => d.stressLevel).length || 0;
+      const [data, total] = await Promise.all([
+        db.biometricData.findMany({
+          where: whereClause,
+          orderBy: { timestamp: "asc" },
+          take: limit,
+          skip: offset,
+        }),
+        db.biometricData.count({ where: whereClause }),
+      ]);
 
-    return c.json({
-      trends: data,
-      averages: {
-        hrv: Math.round(avgHRV),
-        sleepScore: Math.round(avgSleepScore),
-        stressLevel: Math.round(avgStress * 10) / 10,
-      },
-    });
+      // Calculate averages
+      const avgHRV = data.filter(d => d.hrv).reduce((sum, d) => sum + (d.hrv || 0), 0) / data.filter(d => d.hrv).length || 0;
+      const avgSleepScore = data.filter(d => d.sleepScore).reduce((sum, d) => sum + (d.sleepScore || 0), 0) / data.filter(d => d.sleepScore).length || 0;
+      const avgStress = data.filter(d => d.stressLevel).reduce((sum, d) => sum + (d.stressLevel || 0), 0) / data.filter(d => d.stressLevel).length || 0;
+
+      return c.json({
+        trends: data,
+        averages: {
+          hrv: Math.round(avgHRV),
+          sleepScore: Math.round(avgSleepScore),
+          stressLevel: Math.round(avgStress * 10) / 10,
+        },
+        total,
+        limit,
+        offset,
+      });
+    } catch (error) {
+      console.error(`[Biometric] Error:`, error);
+      return c.json({ error: "Internal server error" }, 500);
+    }
   })
 
   // Get energy prediction for today
   .get("/prediction", async (c) => {
-    const user = c.get("user");
-    if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
+    try {
+      const user = c.get("user");
+      if (!user) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      const profile = await db.profile.findUnique({
+        where: { userId: user.id },
+      });
+
+      if (!profile) {
+        return c.json({ prediction: null });
+      }
+
+      // Check subscription tier
+      if (profile.subscriptionTier !== "elite") {
+        return c.json({ error: "Energy prediction requires Elite subscription" }, 403);
+      }
+
+      // Get recent biometric data
+      const recent = await db.biometricData.findMany({
+        where: { profileId: profile.id },
+        orderBy: { timestamp: "desc" },
+        take: 7,
+      });
+
+      // Simple prediction based on recent patterns
+      const prediction = generateEnergyPrediction(recent);
+
+      return c.json({ prediction });
+    } catch (error) {
+      console.error(`[Biometric] Error:`, error);
+      return c.json({ error: "Internal server error" }, 500);
     }
-
-    const profile = await db.profile.findUnique({
-      where: { userId: user.id },
-    });
-
-    if (!profile) {
-      return c.json({ prediction: null });
-    }
-
-    // Check subscription tier
-    if (profile.subscriptionTier !== "elite") {
-      return c.json({ error: "Energy prediction requires Elite subscription" }, 403);
-    }
-
-    // Get recent biometric data
-    const recent = await db.biometricData.findMany({
-      where: { profileId: profile.id },
-      orderBy: { timestamp: "desc" },
-      take: 7,
-    });
-
-    // Simple prediction based on recent patterns
-    const prediction = generateEnergyPrediction(recent);
-
-    return c.json({ prediction });
   });
 
 function generateEnergyPrediction(recentData: any[]) {
