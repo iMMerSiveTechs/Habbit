@@ -148,13 +148,13 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "prettier": "^3.6.2",
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "vitest": "^4.1.0"
   },
   "private": true,
   "patchedDependencies": {
     "react-native@0.79.2": "patches/react-native@0.79.2.patch",
-    "expo-asset@11.1.5": "patches/expo-asset@11.1.5.patch",
-    "react-native-maps@1.24.3": "patches/react-native-maps+1.24.3.patch"
+    "expo-asset@11.1.5": "patches/expo-asset@11.1.5.patch"
   },
   "overrides": {
     "react-native-css-interop": "0.1.22",

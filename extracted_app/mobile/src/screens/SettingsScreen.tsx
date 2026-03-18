@@ -11,6 +11,7 @@ import { meetsMinimumTier } from "@/constants/pricing";
 import type { ThemeMode } from "@/themes/primeTheme";
 import { useHabitsStore } from "@/state/habitsStore";
 import { useTodosStore } from "@/state/todosStore";
+import { useFocusStore } from "@/state/focusStore";
 import * as Haptics from "expo-haptics";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
@@ -99,6 +100,12 @@ export default function SettingsScreen({ navigation }: Props) {
     try {
       await logoutUser().catch(() => {});
       await authClient.signOut();
+
+      // Clear all local state to prevent data leaks between accounts
+      useAppStore.getState().reset();
+      useHabitsStore.getState().reset();
+      useTodosStore.getState().reset();
+      useFocusStore.getState().reset();
     } catch (error) {
       console.error("Sign out error:", error);
     }

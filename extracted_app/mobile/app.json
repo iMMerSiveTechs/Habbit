@@ -2,7 +2,7 @@
   "expo": {
     "name": "Habit",
     "slug": "habit",
-    "scheme": "habit",
+    "scheme": "habbit",
     "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",

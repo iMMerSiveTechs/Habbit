@@ -5,17 +5,17 @@ import type { AppType } from "../index";
 import { z } from "zod";
 
 const biometricSchema = z.object({
-  hrv: z.number().optional(),
-  restingHR: z.number().optional(),
-  sleepScore: z.number().optional(),
-  sleepHours: z.number().optional(),
-  deepSleep: z.number().optional(),
-  remSleep: z.number().optional(),
-  stressLevel: z.number().optional(),
-  energyLevel: z.number().optional(),
-  activityMins: z.number().optional(),
-  steps: z.number().optional(),
-  source: z.string().optional(),
+  hrv: z.number().min(0).max(300).optional(),
+  restingHR: z.number().min(20).max(250).optional(),
+  sleepScore: z.number().min(0).max(100).optional(),
+  sleepHours: z.number().min(0).max(24).optional(),
+  deepSleep: z.number().min(0).max(24).optional(),
+  remSleep: z.number().min(0).max(24).optional(),
+  stressLevel: z.number().min(0).max(100).optional(),
+  energyLevel: z.number().min(0).max(100).optional(),
+  activityMins: z.number().min(0).max(1440).optional(),
+  steps: z.number().min(0).max(200000).optional(),
+  source: z.string().max(50).optional(),
 });
 
 const biometricRouter = new Hono<AppType>()

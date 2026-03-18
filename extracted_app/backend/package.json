@@ -9,12 +9,15 @@
     "start": "NODE_ENV=production bun run dist/index.js",
     "studio": "prisma studio --port 3001 --hostname 0.0.0.0",
     "postinstall": "prisma generate",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
     "@types/bun": "latest",
-    "prisma": "^6.17.1"
+    "prisma": "^6.17.1",
+    "vitest": "^4.1.0"
   },
   "peerDependencies": {
     "typescript": "5.8.3"

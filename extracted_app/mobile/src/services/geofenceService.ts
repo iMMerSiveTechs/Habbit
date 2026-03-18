@@ -5,6 +5,24 @@ import { api } from "@/lib/habitApi";
 
 const GEOFENCE_TASK = "GEOFENCE_MONITORING_TASK";
 
+// Deduplication: track recent geofence events
+const recentEvents = new Map<string, number>(); // geofenceId -> timestamp
+const DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
+function isDuplicate(geofenceId: string): boolean {
+  const now = Date.now();
+  const lastEvent = recentEvents.get(geofenceId);
+  if (lastEvent && now - lastEvent < DEDUP_WINDOW_MS) {
+    return true;
+  }
+  recentEvents.set(geofenceId, now);
+  // Clean old entries
+  for (const [key, time] of recentEvents) {
+    if (now - time > DEDUP_WINDOW_MS) recentEvents.delete(key);
+  }
+  return false;
+}
+
 export interface Geofence {
   id: string;
   name: string;
@@ -42,6 +60,11 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }) => {
     };
 
     console.log(`Geofence event: ${eventType} for region ${region.identifier}`);
+
+    if (isDuplicate(region.identifier)) {
+      console.log(`[Geofence] Duplicate event for ${region.identifier}, skipping`);
+      return;
+    }
 
     try {
       // Parse the region identifier which contains geofence data

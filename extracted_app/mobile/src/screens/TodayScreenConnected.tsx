@@ -15,19 +15,16 @@ import { useFocusStore } from "@/state/focusStore";
 import { useCerebraStore } from "@/state/cerebraStore";
 import { api as habitApi } from "@/lib/habitApi";
 import { api } from "@/lib/api";
-import { todosApi } from "@/lib/todosApi";
 import * as Haptics from "expo-haptics";
 import type { Todo } from "@/shared/contracts";
 import { achievementService } from "@/services/achievementService";
 import { VoiceService } from "@/services/voiceService";
 import { useSession } from "@/lib/useSession";
+import { useTodayData } from "@/hooks/useTodayData";
 
 type Props = BottomTabScreenProps<"TodayTab">;
 
 export default function TodayScreenConnected({ navigation }: Props) {
-  const [refreshing, setRefreshing] = useState(false);
-  const [briefing, setBriefing] = useState<any>(null);
-  const [cerebraMessage, setCerebraMessage] = useState<string | null>(null);
   const [showTimerPicker, setShowTimerPicker] = useState(false);
   const [showTaskPicker, setShowTaskPicker] = useState(false);
   const [showFlowCapture, setShowFlowCapture] = useState(false);
@@ -36,31 +33,31 @@ export default function TodayScreenConnected({ navigation }: Props) {
   const [completedSessionTask, setCompletedSessionTask] = useState<string>("");
   const [completedSessionDuration, setCompletedSessionDuration] = useState<number>(0);
   const [customMinutes, setCustomMinutes] = useState("25");
-  const [habits, setHabits] = useState<any[]>([]);
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [emotionalDashboard, setEmotionalDashboard] = useState<any>(null);
-
-  const todayCompletedCount = habits.filter((h: any) => h.completedToday).length;
-  const todayTotalCount = habits.length;
 
   const userName = useAppStore((state) => state.userName);
   const subscriptionTier = useAppStore((state) => state.subscriptionTier);
-  const integrity = useAppStore((s) => s.integrity);
   const themeMode = useAppStore((s) => s.themeMode);
-  const setIntegrity = useAppStore((s) => s.setIntegrity);
   const gatedNav = useGatedNavigation();
   const { timer, targetDuration, isRunning, task, setTimer, setTargetDuration, setIsRunning, setTask, incrementTimer, resetTimer } = useFocusStore();
   const { data: session } = useSession();
 
-  useEffect(() => {
-    if (!session) return; // Don't fire API calls until session is confirmed
-    loadBriefing();
-    loadCerebraMessage();
-    loadHabits();
-    loadTodos();
-    loadEmotionalDashboard();
-    loadIntegrity();
-  }, [session]);
+  const {
+    briefing,
+    cerebraMessage,
+    setCerebraMessage,
+    habits,
+    todos,
+    emotionalDashboard,
+    integrity,
+    refreshing,
+    refresh,
+    loading,
+    loadHabits,
+    loadCerebraMessage,
+  } = useTodayData(session);
+
+  const todayCompletedCount = habits.filter((h: any) => h.completedToday).length;
+  const todayTotalCount = habits.length;
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -71,89 +68,6 @@ export default function TodayScreenConnected({ navigation }: Props) {
     }
     return () => clearInterval(interval);
   }, [isRunning, incrementTimer]);
-
-  const loadBriefing = async () => {
-    try {
-      const response = await habitApi.getDailyBriefing();
-      // Show briefing if we have focus blocks (even without habits)
-      if (response.briefing && response.briefing.focusBlocks && response.briefing.focusBlocks.length > 0) {
-        setBriefing(response.briefing);
-      } else {
-        setBriefing(null);
-      }
-    } catch (error) {
-      console.log("No briefing data available");
-      setBriefing(null);
-    }
-  };
-
-  const loadCerebraMessage = async () => {
-    if (subscriptionTier !== "pro" && subscriptionTier !== "elite") {
-      setCerebraMessage(null);
-      return;
-    }
-
-    try {
-      const response = await habitApi.queryCerebra("What should I focus on today?");
-      setCerebraMessage(response.response);
-    } catch (error) {
-      console.log("Cerebra not available");
-      setCerebraMessage(null);
-    }
-  };
-
-  const loadHabits = async () => {
-    try {
-      const response = await habitApi.getHabits();
-      const allHabits = response.habits || [];
-      // Only limit preview tier users; paid users see all habits
-      const isPreview = subscriptionTier === "preview";
-      setHabits(isPreview ? allHabits.slice(0, 3) : allHabits);
-    } catch (error) {
-      console.log("No habits data available");
-      setHabits([]);
-    }
-  };
-
-  const loadTodos = async () => {
-    try {
-      const response = await todosApi.getTodos();
-      const incomplete = response.todos?.filter((t: Todo) => !t.completed) || [];
-      // Only limit preview tier users; paid users see all todos
-      const isPreview = subscriptionTier === "preview";
-      setTodos(isPreview ? incomplete.slice(0, 3) : incomplete);
-    } catch (error) {
-      console.log("No todos data available");
-      setTodos([]);
-    }
-  };
-
-  const loadEmotionalDashboard = async () => {
-    try {
-      const response = await habitApi.getEmotionalDashboard();
-      setEmotionalDashboard(response);
-    } catch (error) {
-      console.log("No emotional dashboard data available");
-      setEmotionalDashboard(null);
-    }
-  };
-
-  const loadIntegrity = async () => {
-    try {
-      const response = await api.get<any>("/api/protocol/integrity");
-      if (response?.integrity !== undefined) {
-        setIntegrity(response.integrity);
-      }
-    } catch (error) {
-      console.log("No integrity data available");
-    }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([loadBriefing(), loadCerebraMessage(), loadHabits(), loadTodos(), loadEmotionalDashboard()]);
-    setRefreshing(false);
-  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -322,7 +236,7 @@ export default function TodayScreenConnected({ navigation }: Props) {
         <ScrollView
           className="flex-1"
           contentContainerStyle={{ paddingBottom: 100 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#00D4FF" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#00D4FF" />}
         >
           <View className="px-5 pt-4 pb-6 flex-row items-start justify-between">
             <View className="flex-1">
@@ -656,7 +570,7 @@ export default function TodayScreenConnected({ navigation }: Props) {
           )}
 
           <View className="my-10">
-            <FocusOrb size={150} timer={formatTimer()} />
+            <FocusOrb size={150} timer={formatTimer()} targetDuration={`${Math.floor(targetDuration / 60)}:${(targetDuration % 60).toString().padStart(2, '0')}`} />
             <View className="items-center mt-6">
               {/* Show task name if set */}
               {task && (

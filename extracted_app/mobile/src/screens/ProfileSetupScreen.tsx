@@ -7,6 +7,7 @@ import { Sparkles } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useAppStore } from "@/state/appStore";
 import { api } from "@/lib/habitApi";
+import { api as coreApi } from "@/lib/api";
 import { useSession } from "@/lib/useSession";
 
 type Props = RootStackScreenProps<"ProfileSetup">;
@@ -134,6 +135,19 @@ export default function ProfileSetupScreen({ navigation }: Props) {
         setPendingGoal(null);
       } catch (error) {
         console.warn("Could not save user goal to server, will retry after sign-in:", error);
+      }
+
+      // Attempt to persist goal to backend
+      try {
+        await coreApi.post('/api/emotional/goal', {
+          purpose: goalData.purpose,
+          identity: goalData.identity,
+          bigWhy: goalData.bigWhy,
+        });
+        console.log('[Profile] Goal synced to backend');
+      } catch (error) {
+        // Non-blocking: goal is saved locally, will sync later
+        console.log('[Profile] Goal sync deferred:', error);
       }
     }
 

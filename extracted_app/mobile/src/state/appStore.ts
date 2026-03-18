@@ -30,6 +30,7 @@ interface AppState {
   setIntegrity: (integrity: number) => void;
   setXp: (xp: number) => void;
   setPendingGoal: (goal: PendingGoal | null) => void;
+  reset: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -53,6 +54,16 @@ export const useAppStore = create<AppState>()(
       setIntegrity: (integrity) => set({ integrity }),
       setXp: (xp) => set({ xp }),
       setPendingGoal: (goal) => set({ pendingGoal: goal }),
+      reset: () => set({
+        hasCompletedOnboarding: false,
+        onboardingStage: "welcome",
+        subscriptionTier: "preview",
+        userName: null,
+        themeMode: "ice",
+        integrity: 100,
+        xp: 0,
+        pendingGoal: null,
+      }),
     }),
     {
       name: "app-storage",

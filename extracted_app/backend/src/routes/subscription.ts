@@ -102,7 +102,9 @@ const SyncBodySchema = z.object({
 // ROUTER
 // ============================================================
 
-const subscriptionRouter = new Hono<AppType>().post(
+const subscriptionRouter = new Hono<AppType>();
+
+subscriptionRouter.post(
   "/sync",
   zValidator("json", SyncBodySchema),
   async (c) => {
@@ -162,5 +164,79 @@ const subscriptionRouter = new Hono<AppType>().post(
     return c.json({ success: true, tier: resolvedTier });
   }
 );
+
+// RevenueCat webhook - called when subscription status changes
+subscriptionRouter.post("/webhook", async (c) => {
+  try {
+    const body = await c.req.json();
+    const event = body.event;
+
+    if (!event) {
+      return c.json({ error: "No event in payload" }, 400);
+    }
+
+    const appUserId = event.app_user_id;
+    if (!appUserId) {
+      console.log("[Subscription Webhook] No app_user_id in event");
+      return c.json({ ok: true });
+    }
+
+    const eventType = event.type;
+    console.log(`[Subscription Webhook] ${eventType} for user ${appUserId}`);
+
+    // Find profile by userId
+    const profile = await db.profile.findUnique({ where: { userId: appUserId } });
+    if (!profile) {
+      console.log(`[Subscription Webhook] No profile found for user ${appUserId}`);
+      return c.json({ ok: true });
+    }
+
+    // Map RevenueCat event to tier update
+    let newTier: string | null = null;
+
+    switch (eventType) {
+      case "INITIAL_PURCHASE":
+      case "RENEWAL":
+      case "PRODUCT_CHANGE":
+      case "UNCANCELLATION": {
+        // Determine tier from product identifier
+        const productId = event.product_id || "";
+        if (productId.includes("elite")) newTier = "elite";
+        else if (productId.includes("pro")) newTier = "pro";
+        else if (productId.includes("core")) newTier = "core";
+        else newTier = "core"; // Default paid tier
+        break;
+      }
+      case "CANCELLATION":
+        // Don't downgrade immediately - wait for expiration
+        console.log(`[Subscription Webhook] Cancellation noted for ${appUserId}`);
+        break;
+      case "EXPIRATION":
+      case "BILLING_ISSUE_GRACE_PERIOD_EXPIRED":
+        newTier = "preview";
+        break;
+      default:
+        console.log(`[Subscription Webhook] Unhandled event: ${eventType}`);
+    }
+
+    if (newTier) {
+      await db.profile.update({
+        where: { id: profile.id },
+        data: {
+          subscriptionTier: newTier,
+          subscriptionEndsAt: event.expiration_at_ms
+            ? new Date(event.expiration_at_ms)
+            : null,
+        },
+      });
+      console.log(`[Subscription Webhook] Updated ${appUserId} to tier: ${newTier}`);
+    }
+
+    return c.json({ ok: true });
+  } catch (error) {
+    console.error("[Subscription Webhook] Error:", error);
+    return c.json({ error: "Webhook processing failed" }, 500);
+  }
+});
 
 export default subscriptionRouter;

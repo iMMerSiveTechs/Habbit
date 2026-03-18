@@ -162,132 +162,113 @@ const RootNavigator = () => {
       />
       <RootStack.Screen
         name="LoginModalScreen"
-        component={LoginModalScreen}
         options={{ presentation: "modal", title: "Sign In", headerShown: false }}
-      />
+      >{(props) => <ErrorBoundary><LoginModalScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="ForgotPassword"
-        component={ForgotPasswordScreen}
         options={{ presentation: "modal", title: "Reset Password", headerShown: false }}
-      />
+      >{(props) => <ErrorBoundary><ForgotPasswordScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="LocationReminder"
-        component={LocationReminderScreen}
         options={{ headerShown: false }}
-      />
+      >{(props) => <ErrorBoundary><LocationReminderScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="MorningActivation"
-        component={MorningActivationScreen}
         options={{
           headerShown: false,
           presentation: "modal"
         }}
-      />
+      >{(props) => <ErrorBoundary><MorningActivationScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="TodaysPlan"
-        component={TodaysPlanScreen}
         options={{
           headerShown: false
         }}
-      />
+      >{(props) => <ErrorBoundary><TodaysPlanScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="PlanTomorrowScreen"
-        component={PlanTomorrowScreen}
         options={{
           headerShown: false
         }}
-      />
+      >{(props) => <ErrorBoundary><PlanTomorrowScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="HabitDetailScreen"
-        component={HabitDetailScreen}
         options={{
           headerShown: false
         }}
-      />
+      >{(props) => <ErrorBoundary><HabitDetailScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="EveningReflection"
-        component={EveningReflectionScreen}
         options={{
           headerShown: false,
           presentation: "modal"
         }}
-      />
+      >{(props) => <ErrorBoundary><EveningReflectionScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="AchievementCelebration"
-        component={AchievementCelebrationScreen}
         options={{
           headerShown: false,
           presentation: "modal"
         }}
-      />
+      >{(props) => <ErrorBoundary><AchievementCelebrationScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="WeeklyInsights"
-        component={WeeklyInsightsScreen}
         options={{
           headerShown: false
         }}
-      />
+      >{(props) => <ErrorBoundary><WeeklyInsightsScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="PatternInsights"
-        component={PatternInsightsScreen}
         options={{
           headerShown: false
         }}
-      />
+      >{(props) => <ErrorBoundary><PatternInsightsScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="CategoryAnalytics"
-        component={CategoryAnalyticsScreen}
         options={{
           headerShown: false
         }}
-      />
+      >{(props) => <ErrorBoundary><CategoryAnalyticsScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="AdvancedAnalytics"
-        component={AdvancedAnalyticsScreen}
         options={{
           headerShown: false
         }}
-      />
+      >{(props) => <ErrorBoundary><AdvancedAnalyticsScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="Marketplace"
-        component={MarketplaceScreen}
         options={{
           headerShown: false
         }}
-      />
+      >{(props) => <ErrorBoundary><MarketplaceScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="Vault"
-        component={VaultScreen}
         options={{
           headerShown: false
         }}
-      />
+      >{(props) => <ErrorBoundary><VaultScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="CerebraCoach"
-        component={CerebraCoachScreen}
         options={{
           headerShown: false,
           presentation: "modal",
         }}
-      />
+      >{(props) => <ErrorBoundary><CerebraCoachScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="Upgrade"
-        component={UpgradeScreen}
         options={{
           headerShown: false,
           presentation: "modal",
         }}
-      />
+      >{(props) => <ErrorBoundary><UpgradeScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="NotificationSettings"
-        component={NotificationSettingsScreen}
         options={{ headerShown: false }}
-      />
+      >{(props) => <ErrorBoundary><NotificationSettingsScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
       <RootStack.Screen
         name="EditHabit"
-        component={EditHabitScreen}
         options={{ headerShown: false }}
-      />
+      >{(props) => <ErrorBoundary><EditHabitScreen {...props} /></ErrorBoundary>}</RootStack.Screen>
     </RootStack.Navigator>
   );
 };

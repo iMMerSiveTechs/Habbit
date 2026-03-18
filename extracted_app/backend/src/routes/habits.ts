@@ -297,6 +297,11 @@ const habitsRouter = new Hono<AppType>()
       },
     });
 
+    // Check first habit achievement (non-blocking)
+    import("../services/achievementService").then(({ checkHabitCreated }) => {
+      checkHabitCreated(profile.id).catch(console.error);
+    });
+
     return c.json({
       habit: {
         id: habit.id,
@@ -507,6 +512,11 @@ const habitsRouter = new Hono<AppType>()
     if (newBestStreak > habit.bestStreak) {
       await db.habit.update({ where: { id: habitId }, data: { bestStreak: newBestStreak } });
     }
+
+    // Check achievement milestones (non-blocking)
+    import("../services/achievementService").then(({ checkHabitMilestones }) => {
+      checkHabitMilestones(profile.id, habitId).catch(console.error);
+    });
 
     return c.json({
       event: {

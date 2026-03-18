@@ -280,7 +280,12 @@ export function InteractiveHabitCard({
         )}
 
         {/* Main card */}
-        <GlassCard className="p-4 flex-row items-center" style={cardStyle}>
+        <GlassCard
+          className="p-4 flex-row items-center"
+          style={cardStyle}
+          accessibilityLabel={`${habit.title} habit, ${isComplete ? 'completed' : 'not completed'}. ${effectiveStreak} day streak`}
+          accessibilityRole="button"
+        >
           {/* Glow effect overlay */}
           <Animated.View
             className="absolute inset-0 rounded-2xl"

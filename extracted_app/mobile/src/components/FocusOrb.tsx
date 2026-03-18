@@ -13,10 +13,11 @@ import { LinearGradient } from "expo-linear-gradient";
 interface FocusOrbProps {
   size?: number;
   timer?: string;
+  targetDuration?: string;
   showTimer?: boolean;
 }
 
-export function FocusOrb({ size = 150, timer = "25:00", showTimer = true }: FocusOrbProps) {
+export function FocusOrb({ size = 150, timer = "25:00", targetDuration, showTimer = true }: FocusOrbProps) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0.7);
 
@@ -46,7 +47,11 @@ export function FocusOrb({ size = 150, timer = "25:00", showTimer = true }: Focu
   }));
 
   return (
-    <View style={{ alignItems: "center", justifyContent: "center" }}>
+    <View
+      style={{ alignItems: "center", justifyContent: "center" }}
+      accessibilityLabel={`Focus timer${showTimer ? `, ${timer}` : ''}`}
+      accessibilityRole="timer"
+    >
       <Animated.View style={[animatedStyle, { width: size, height: size }]}>
         <LinearGradient
           colors={["#00D4FF", "#FF00E5", "#8B5CF6"]}
@@ -62,16 +67,30 @@ export function FocusOrb({ size = 150, timer = "25:00", showTimer = true }: Focu
           ]}
         >
           {showTimer && (
-            <Text
-              style={[
-                styles.timer,
-                {
-                  fontSize: size * 0.2,
-                },
-              ]}
-            >
-              {timer}
-            </Text>
+            <View style={{ alignItems: "center" }}>
+              <Text
+                style={[
+                  styles.timer,
+                  {
+                    fontSize: size * 0.2,
+                  },
+                ]}
+              >
+                {timer}
+              </Text>
+              {targetDuration && (
+                <Text
+                  style={[
+                    styles.targetLabel,
+                    {
+                      fontSize: size * 0.09,
+                    },
+                  ]}
+                >
+                  of {targetDuration}
+                </Text>
+              )}
+            </View>
           )}
         </LinearGradient>
       </Animated.View>
@@ -95,5 +114,13 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0, 0, 0, 0.5)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 10,
+  },
+  targetLabel: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontWeight: "500",
+    marginTop: 2,
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
 });

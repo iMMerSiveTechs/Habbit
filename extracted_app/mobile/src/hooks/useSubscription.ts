@@ -18,12 +18,12 @@ import {
 import { resolveTierFromCustomerInfo } from "@/billing/tier";
 import { api } from "@/lib/api";
 
-/** Fire-and-forget backend tier sync after purchase/restore */
+/** Backend tier sync after purchase/restore (blocking, with error tolerance) */
 async function syncTierToBackend(): Promise<void> {
   try {
     await api.post("/api/subscription/sync", {});
-  } catch {
-    // Non-blocking — backend sync failure should never block the UI
+  } catch (syncError) {
+    console.log("[Subscription] Backend sync failed, will retry on next app open:", syncError);
   }
 }
 
@@ -64,7 +64,7 @@ export function useSubscription() {
         const result = await purchasePackage(pkg);
         if (result.ok) {
           await syncTierFromRevenueCat();
-          syncTierToBackend(); // fire-and-forget backend sync
+          await syncTierToBackend(); // blocking backend sync
           return true;
         }
         return false;
@@ -81,7 +81,7 @@ export function useSubscription() {
       const result = await restorePurchases();
       if (result.ok) {
         await syncTierFromRevenueCat();
-        syncTierToBackend(); // fire-and-forget backend sync
+        await syncTierToBackend(); // blocking backend sync
         return true;
       }
       return false;

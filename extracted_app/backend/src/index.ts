@@ -6,6 +6,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { rateLimiter } from "hono-rate-limiter";
 
 import { auth } from "./auth";
+import { db } from "./db";
 import { env } from "./env";
 import { uploadRouter } from "./routes/upload";
 import { sampleRouter } from "./routes/sample";
@@ -38,8 +39,45 @@ export { type AppType };
 // AppType context adds user and session to the context, will be null if the user or session is null
 const app = new Hono<AppType>();
 
+// Global error handler - catches all unhandled exceptions
+app.onError((err, c) => {
+  const method = c.req.method;
+  const path = c.req.path;
+  console.error(`[ERROR] ${method} ${path}:`, err.message);
+  if (err.stack) console.error(err.stack);
+
+  // Handle Prisma-specific errors
+  if (err.message?.includes('Unique constraint')) {
+    return c.json({ error: 'Resource already exists', code: 'DUPLICATE' }, 409);
+  }
+  if (err.message?.includes('Record to update not found') || err.message?.includes('Record to delete does not exist')) {
+    return c.json({ error: 'Resource not found', code: 'NOT_FOUND' }, 404);
+  }
+
+  return c.json({
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+    code: 'INTERNAL_ERROR'
+  }, 500);
+});
+
+// 404 handler
+app.notFound((c) => {
+  return c.json({ error: 'Not found', code: 'NOT_FOUND' }, 404);
+});
+
 console.log("🔧 Initializing Hono application...");
 app.use("*", logger());
+
+// Request timing middleware
+app.use("*", async (c, next) => {
+  const start = Date.now();
+  await next();
+  const duration = Date.now() - start;
+  if (duration > 2000) {
+    console.warn(`[SLOW] ${c.req.method} ${c.req.path} took ${duration}ms`);
+  }
+});
+
 app.use("/*", cors({
   origin: (origin) => {
     // No origin header means native app or same-origin request — allow
@@ -64,6 +102,16 @@ app.use("/*", cors({
   credentials: true, // Enable credentials (cookies, authorization headers)
   allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization"],
+}));
+
+// Strict rate limiting for auth endpoints - 10 requests per minute
+app.use("/api/auth/*", rateLimiter({
+  windowMs: 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  keyGenerator: (c) => {
+    return c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown";
+  },
 }));
 
 // Rate limiting - 100 requests per minute per IP
@@ -186,11 +234,45 @@ app.route("/api/user", userRouter);
 console.log("Mounting subscription routes at /api/subscription");
 app.route("/api/subscription", subscriptionRouter);
 
+// Session validity check - called on app foreground
+app.get("/api/auth/check", (c) => {
+  const user = c.get("user");
+  const session = c.get("session");
+  if (!user || !session) {
+    return c.json({ valid: false }, 401);
+  }
+  return c.json({ valid: true, userId: user.id, email: user.email });
+});
+
+// Achievement endpoints
+app.get("/api/achievements/uncelebrated", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+  const profile = await db.profile.findUnique({ where: { userId: user.id } });
+  if (!profile) return c.json({ achievements: [] });
+  const { getUncelebratedAchievements } = await import("./services/achievementService");
+  const achievements = await getUncelebratedAchievements(profile.id);
+  return c.json({ achievements });
+});
+
+app.post("/api/achievements/:id/celebrate", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+  const { markCelebrated } = await import("./services/achievementService");
+  await markCelebrated(c.req.param("id"));
+  return c.json({ success: true });
+});
+
 // Health check endpoint
 // Used by load balancers and monitoring tools to verify service is running
-app.get("/health", (c) => {
-  console.log("💚 Health check requested");
-  return c.json({ status: "ok" });
+app.get("/health", async (c) => {
+  try {
+    // Verify DB connection
+    await db.$queryRaw`SELECT 1`;
+    return c.json({ status: "ok", timestamp: new Date().toISOString() });
+  } catch (error) {
+    return c.json({ status: "degraded", error: "Database unreachable" }, 503);
+  }
 });
 
 // Start the server

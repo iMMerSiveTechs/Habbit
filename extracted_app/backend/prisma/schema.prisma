@@ -104,6 +104,8 @@ model Profile {
   trackScores        TrackScore[]
   userPreference     UserPreference?
   playHistory        PlayHistory[]
+
+  @@index([subscriptionTier])
 }
 
 model Habit {
@@ -136,6 +138,8 @@ model Habit {
   events            HabitEvent[]
   reminders         HabitReminder[]
 
+  @@index([profileId, archived])
+  @@index([profileId, category])
   @@map("habit")
 }
 
@@ -163,6 +167,7 @@ model HabitEvent {
   clientEventId String?
   habit         Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
 
+  @@index([habitId, completedAt])
   @@map("habit_event")
 }
 
@@ -178,6 +183,7 @@ model Reflection {
   createdAt   DateTime @default(now())
   profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
+  @@index([profileId, date])
   @@map("reflection")
 }
 
@@ -206,6 +212,7 @@ model FocusSession {
   createdAt       DateTime  @default(now())
   profile         Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
+  @@index([profileId, createdAt])
   @@map("focus_session")
 }
 
@@ -333,6 +340,7 @@ model LocationVisit {
   productivity    Int?
   geofence        LocationGeofence @relation(fields: [geofenceId], references: [id], onDelete: Cascade)
 
+  @@index([profileId])
   @@map("location_visit")
 }
 
@@ -392,6 +400,8 @@ model Todo {
   items             TodoItem[]
   reminders         TodoReminder[]
 
+  @@index([profileId, completed])
+  @@index([profileId, archived])
   @@map("todo")
 }
 

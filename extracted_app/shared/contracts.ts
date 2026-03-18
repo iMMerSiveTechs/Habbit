@@ -1259,3 +1259,153 @@ export const claudeInsightSchema = z.object({
 });
 export type ClaudeInsight = z.infer<typeof claudeInsightSchema>;
 
+// ============================================================
+// API RESPONSE SCHEMAS (Phase 6 - Type Safety)
+// ============================================================
+
+export const DailyBriefingSchema = z.object({
+  briefing: z.object({
+    greeting: z.string().optional(),
+    focusBlocks: z.array(z.object({
+      time: z.string(),
+      task: z.string(),
+      duration: z.number().optional(),
+    })).optional(),
+    priorities: z.array(z.string()).optional(),
+    motivationalNote: z.string().optional(),
+  }).optional(),
+});
+export type DailyBriefing = z.infer<typeof DailyBriefingSchema>;
+
+export const CerebraMessageSchema = z.object({
+  message: z.string(),
+  suggestions: z.array(z.string()).optional(),
+  actionItems: z.array(z.object({
+    text: z.string(),
+    type: z.string().optional(),
+  })).optional(),
+});
+export type CerebraMessage = z.infer<typeof CerebraMessageSchema>;
+
+export const EmotionalDashboardSchema = z.object({
+  currentMood: z.number().nullable().optional(),
+  energyLevel: z.number().nullable().optional(),
+  stressLevel: z.number().nullable().optional(),
+  moodTrend: z.array(z.object({
+    date: z.string(),
+    mood: z.number(),
+  })).optional(),
+  topCorrelation: z.string().nullable().optional(),
+});
+export type EmotionalDashboard = z.infer<typeof EmotionalDashboardSchema>;
+
+export const AchievementSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  title: z.string(),
+  description: z.string(),
+  unlockedAt: z.string(),
+  celebrated: z.boolean(),
+  habitId: z.string().nullable().optional(),
+});
+export type Achievement = z.infer<typeof AchievementSchema>;
+
+export const FocusSessionResponseSchema = z.object({
+  id: z.string(),
+  startTime: z.string(),
+  endTime: z.string().nullable(),
+  duration: z.number().nullable(),
+  task: z.string(),
+  completed: z.boolean(),
+  interrupted: z.boolean(),
+  productivity: z.number().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  inFlowState: z.boolean().optional(),
+});
+export type FocusSessionResponse = z.infer<typeof FocusSessionResponseSchema>;
+
+export const IntegrityReportSchema = z.object({
+  integrity: z.number(),
+  xp: z.number(),
+  grade: z.string().optional(),
+  adherence: z.number().optional(),
+  protocolStatus: z.array(z.object({
+    habitId: z.string(),
+    title: z.string(),
+    status: z.string(),
+    progress: z.number(),
+    target: z.number(),
+    windowDays: z.number(),
+    daysRemaining: z.number().optional(),
+  })).optional(),
+});
+export type IntegrityReport = z.infer<typeof IntegrityReportSchema>;
+
+export const SkipPatternSchema = z.object({
+  id: z.string(),
+  itemType: z.string(),
+  itemId: z.string(),
+  totalMisses: z.number(),
+  totalScheduled: z.number(),
+  skipRate: z.number(),
+  commonSkipDays: z.string().nullable().optional(),
+  commonSkipHours: z.string().nullable().optional(),
+  suggestedTime: z.string().nullable().optional(),
+  suggestedDays: z.string().nullable().optional(),
+  suggestedFrequency: z.string().nullable().optional(),
+  confidenceScore: z.number(),
+});
+export type SkipPattern = z.infer<typeof SkipPatternSchema>;
+
+export const MissedItemSchema = z.object({
+  id: z.string(),
+  itemType: z.string(),
+  itemId: z.string(),
+  itemTitle: z.string(),
+  scheduledTime: z.string().nullable().optional(),
+  detectedAt: z.string(),
+  responded: z.boolean(),
+  responseType: z.string().nullable().optional(),
+  dayOfWeek: z.number(),
+  hourOfDay: z.number(),
+});
+export type MissedItem = z.infer<typeof MissedItemSchema>;
+
+export const UserGoalSchema = z.object({
+  id: z.string(),
+  purpose: z.string(),
+  identity: z.string().nullable().optional(),
+  bigWhy: z.string(),
+});
+export type UserGoal = z.infer<typeof UserGoalSchema>;
+
+export const SubscriptionInfoSchema = z.object({
+  tier: z.string(),
+  expiresAt: z.string().nullable().optional(),
+  isActive: z.boolean(),
+});
+export type SubscriptionInfo = z.infer<typeof SubscriptionInfoSchema>;
+
+// Achievement catalog for Phase 11
+export const ACHIEVEMENT_CATALOG = {
+  first_habit: { type: 'first_habit', title: 'First Step', description: 'Created your first habit', xp: 50 },
+  first_completion: { type: 'first_completion', title: 'Momentum', description: 'Completed a habit for the first time', xp: 50 },
+  streak_3: { type: 'streak_3', title: 'Getting Started', description: 'Achieved a 3-day streak', xp: 100 },
+  streak_7: { type: 'streak_7', title: 'Week Warrior', description: 'Achieved a 7-day streak', xp: 200 },
+  streak_14: { type: 'streak_14', title: 'Fortnight Force', description: 'Achieved a 14-day streak', xp: 300 },
+  streak_30: { type: 'streak_30', title: 'Monthly Master', description: 'Achieved a 30-day streak', xp: 500 },
+  streak_100: { type: 'streak_100', title: 'Centurion', description: 'Achieved a 100-day streak', xp: 1000 },
+  completions_10: { type: 'completions_10', title: 'Decade Mark', description: 'Completed habits 10 times', xp: 100 },
+  completions_100: { type: 'completions_100', title: 'Century Club', description: 'Completed habits 100 times', xp: 500 },
+  completions_1000: { type: 'completions_1000', title: 'Millennium', description: 'Completed habits 1000 times', xp: 2000 },
+  first_focus: { type: 'first_focus', title: 'Deep Work Begins', description: 'Completed your first focus session', xp: 50 },
+  focus_1h: { type: 'focus_1h', title: 'Hour of Power', description: 'Accumulated 1 hour of focus time', xp: 150 },
+  focus_10h: { type: 'focus_10h', title: 'Deep Diver', description: 'Accumulated 10 hours of focus time', xp: 500 },
+  first_todo: { type: 'first_todo', title: 'Task Tackler', description: 'Completed your first todo', xp: 50 },
+  protocol_promoted: { type: 'protocol_promoted', title: 'Protocol Graduate', description: 'A protocol habit was promoted to core', xp: 300 },
+  morning_7: { type: 'morning_7', title: 'Early Riser', description: 'Completed morning activation 7 days in a row', xp: 200 },
+  reflection_7: { type: 'reflection_7', title: 'Thoughtful', description: 'Completed evening reflection 7 days in a row', xp: 200 },
+  integrity_90: { type: 'integrity_90', title: 'Integrity Guard', description: 'Maintained 90%+ integrity for 7 days', xp: 300 },
+  all_habits_day: { type: 'all_habits_day', title: 'Perfect Day', description: 'Completed all habits in a single day', xp: 150 },
+} as const;
+

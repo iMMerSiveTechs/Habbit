@@ -80,6 +80,28 @@ userRouter.post(
         await db.userPreference.deleteMany({ where: { profileId: profile.id } });
         await db.playHistory.deleteMany({ where: { profileId: profile.id } });
 
+        // Delete adaptive intelligence data (previously missing)
+        await db.missedItem.deleteMany({ where: { profileId: profile.id } });
+        await db.skipPattern.deleteMany({ where: { profileId: profile.id } });
+        await db.adaptiveNotification.deleteMany({ where: { profileId: profile.id } });
+        await db.locationPattern.deleteMany({ where: { profileId: profile.id } });
+        await db.locationMoodMap.deleteMany({ where: { profileId: profile.id } });
+
+        // Delete schedule data
+        await db.workSchedule.deleteMany({ where: { profileId: profile.id } });
+        await db.route.deleteMany({ where: { profileId: profile.id } });
+        await db.morningRoutine.deleteMany({ where: { profileId: profile.id } });
+
+        // Delete smart notification data
+        await db.userEngagementLog.deleteMany({ where: { profileId: profile.id } });
+        await db.engagementPattern.deleteMany({ where: { profileId: profile.id } });
+        await db.notificationPreference.deleteMany({ where: { profileId: profile.id } });
+        await db.smartNotificationLog.deleteMany({ where: { profileId: profile.id } });
+
+        // Delete location suggestions and reminders
+        await db.locationSuggestion.deleteMany({ where: { profileId: profile.id } });
+        await db.locationReminder.deleteMany({ where: { profileId: profile.id } });
+
         // Habits (cascade deletes HabitEvent and HabitReminder)
         const habits = await db.habit.findMany({ where: { profileId: profile.id } });
         for (const habit of habits) {

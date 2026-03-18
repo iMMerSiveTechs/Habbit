@@ -12,6 +12,7 @@ import { GlassCard } from "./GlassCard";
 import { CheckCircle, X } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
+import { api } from "@/lib/api";
 
 interface FocusSessionReflectionProps {
   visible: boolean;
@@ -61,6 +62,17 @@ export function FocusSessionReflection({
       distractions: distractions > 0 ? distractions : undefined,
       inFlowState,
     };
+
+    // Send reflection data to backend
+    try {
+      await api.post(`/api/focus/sessions/${sessionId}/reflect`, {
+        productivity: data.productivity,
+        notes: data.notes,
+        inFlowState: data.inFlowState,
+      });
+    } catch (error) {
+      console.log('[Focus] Reflection sync failed:', error);
+    }
 
     onComplete(data);
 

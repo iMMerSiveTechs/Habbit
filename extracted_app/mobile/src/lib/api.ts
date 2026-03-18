@@ -85,6 +85,10 @@ const fetchFn = async <T>(path: string, options: FetchOptions): Promise<T> => {
 
   // Step 2: Make the HTTP request
   try {
+    // Request timeout - abort after 15 seconds
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     // Construct the full URL by combining the base backend URL with the endpoint path
     const response = await fetch(`${BACKEND_URL}${path}`, {
       method,
@@ -99,7 +103,10 @@ const fetchFn = async <T>(path: string, options: FetchOptions): Promise<T> => {
       // Use "omit" to prevent browser from automatically sending credentials
       // We manually handle cookies via the Cookie header for more control
       credentials: "omit",
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     // Step 3: Error handling - Check if the response was successful
     if (!response.ok) {
@@ -133,9 +140,11 @@ const fetchFn = async <T>(path: string, options: FetchOptions): Promise<T> => {
     // The response is cast to the expected type T for type safety
     return response.json() as Promise<T>;
   } catch (error: any) {
-    // Log the error for debugging purposes
+    if (error?.name === 'AbortError') {
+      console.log(`[api.ts]: Request timeout for ${path}`);
+      throw new Error(`[api.ts]: Request timeout - server did not respond within 15 seconds`);
+    }
     console.log(`[api.ts]: ${error}`);
-    // Re-throw the error so the calling code can handle it appropriately
     throw error;
   }
 };

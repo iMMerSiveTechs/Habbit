@@ -35,6 +35,15 @@ export default function LocationOnboardingScreen({ navigation, route }: Props) {
 
       if (status === "granted") {
         console.log("📍 Location permission granted");
+
+        // Request background permissions for geofencing (required on iOS)
+        const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+        if (bgStatus === 'granted') {
+          console.log('[Location] Background location permission granted');
+        } else {
+          console.log('[Location] Background location denied - geofencing will be limited');
+        }
+
         setGranted(true);
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 

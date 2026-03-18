@@ -38,7 +38,12 @@ export const PRO_LIMITS = {
 };
 
 export function getTierLevel(tier: string): number {
-  return TIER_LEVELS[tier] ?? 0;
+  const level = TIER_LEVELS[tier];
+  if (level === undefined) {
+    console.warn(`[tierGuard] Unknown tier "${tier}", defaulting to free (0)`);
+    return 0;
+  }
+  return level;
 }
 
 export function meetsMinimumTier(userTier: string, requiredTier: Tier): boolean {
