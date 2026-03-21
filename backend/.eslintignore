@@ -1,0 +1,4 @@
+# Ignore Prisma generated files
+generated/
+node_modules/
+dist/
