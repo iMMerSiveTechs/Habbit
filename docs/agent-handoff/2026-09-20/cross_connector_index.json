@@ -1,0 +1,101 @@
+{
+  "project": "Habit",
+  "generated_date": "2026-09-20",
+  "status": "agent-handoff-map",
+  "sensitivity": "private-package-internal-map",
+  "source_artifacts": [
+    {
+      "file": "Habit.zip",
+      "bytes": 12531659,
+      "sha256": "5f374af44713a7d321ba32be1ddbc8d3151d08620d8f48fcf03836c1a7db9b19"
+    },
+    {
+      "file": "Habit_Google_Drive_Ready_Package.zip",
+      "bytes": 37303266,
+      "sha256": "c2d2715a2191dcc74bfcf52acb00eb97fcf1cdb98c2e1995fa24deb24b560843"
+    },
+    {
+      "file": "Habit_Google_Drive_Ready_README.md",
+      "bytes": 2369,
+      "sha256": "f4b5a26f454f5eb0af58759f96b75961525a60b29e588538ebc5d59776951354"
+    },
+    {
+      "file": "Habit_Project_Inventory.csv",
+      "bytes": 30388,
+      "sha256": "e1e2c7801de0c2ecda9c74af8c76e8b925011e017536c998b11c53b66a072d25"
+    },
+    {
+      "file": "Habit_Database_Table_Counts.csv",
+      "bytes": 1047,
+      "sha256": "4539377ac6343f451219d85a9b65afb58e611e2df360e4536f14c57a186df5b3"
+    }
+  ],
+  "snapshot_stats": {
+    "files_inventoried": 259,
+    "categories": {
+      "source_code": 176,
+      "documentation": 25,
+      "database_schema_migrations": 23,
+      "assets": 20,
+      "configuration": 12,
+      "logs": 2,
+      "database": 1
+    },
+    "top_dirs": {
+      "<root>": 3,
+      "backend": 81,
+      "mobile": 174,
+      "shared": 1
+    },
+    "sqlite_tables_exported": 57,
+    "sqlite_total_rows": 469,
+    "non_empty_tables": [
+      {"table": "habit_template_item", "row_count": 144},
+      {"table": "user_engagement_log", "row_count": 108},
+      {"table": "todo_template_item", "row_count": 53},
+      {"table": "habit_template", "row_count": 24},
+      {"table": "_prisma_migrations", "row_count": 23},
+      {"table": "todo_item", "row_count": 22},
+      {"table": "smart_notification_log", "row_count": 18},
+      {"table": "habit", "row_count": 17},
+      {"table": "habit_event", "row_count": 15},
+      {"table": "todo_template", "row_count": 10},
+      {"table": "session", "row_count": 5},
+      {"table": "account", "row_count": 4},
+      {"table": "Profile", "row_count": 4},
+      {"table": "user", "row_count": 4},
+      {"table": "todo", "row_count": 4},
+      {"table": "daily_intention", "row_count": 3},
+      {"table": "template_purchase", "row_count": 2},
+      {"table": "engagement_pattern", "row_count": 2},
+      {"table": "focus_session", "row_count": 2},
+      {"table": "notification_preference", "row_count": 2},
+      {"table": "daily_reflection", "row_count": 1},
+      {"table": "todo_reminder", "row_count": 1},
+      {"table": "user_goal", "row_count": 1}
+    ]
+  },
+  "architecture": {
+    "mobile": "Expo SDK 53 / React Native snapshot under mobile/",
+    "backend": "Bun + Hono TypeScript server under backend/",
+    "database": "Prisma + SQLite; backend/prisma/dev.db; migrations included",
+    "auth": "Better Auth with Expo plugin",
+    "billing": "RevenueCat tiers visible in source docs"
+  },
+  "connector_routing": [
+    {"surface": "Google Drive", "role": "evidence_vault", "write_safe": "private package/docs only", "never": "public sharing without approval"},
+    {"surface": "GitHub", "role": "technical_handoff", "write_safe": "redacted docs/branch/PR", "never": "raw env/db/logs/package without approval"},
+    {"surface": "Notion", "role": "knowledge_index", "write_safe": "overview/routing/decisions", "never": "raw secrets/binaries"},
+    {"surface": "Linear", "role": "engineering_execution", "write_safe": "issues/docs/approval gates", "never": "canonical archive"},
+    {"surface": "Slack", "role": "team_awareness", "write_safe": "canvas/pointer", "never": "long-term source of truth"},
+    {"surface": "ClickUp", "role": "ops_tracking", "write_safe": "doc/checklist", "never": "canonical code/evidence"}
+  ],
+  "approval_gates": [
+    "source_code_changes",
+    "merge_to_main",
+    "deployment",
+    "billing_auth_provider_state",
+    "public_sharing",
+    "full_repo_import"
+  ]
+}
